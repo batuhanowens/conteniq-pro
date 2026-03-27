@@ -285,9 +285,30 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subtitles_js
         upd(jid, 0, f"Hata: {str(e)[:300]}", "error")
         print(f"[{jid}] ERROR: {e}")
 
+
+def strip_emoji(text):
+    """ffmpeg drawtext emoji desteklemez — temizle."""
+    import unicodedata
+    result = []
+    for char in text:
+        cp = ord(char)
+        if (0x1F000 <= cp <= 0x1FFFF or
+            0x2600 <= cp <= 0x27BF or
+            0xFE00 <= cp <= 0xFE0F or
+            cp == 0x200D):
+            continue
+        result.append(char)
+    cleaned = ''.join(result).strip()
+    # Çift boşlukları temizle
+    import re
+    return re.sub(r'  +', ' ', cleaned)
+
 def build_vf(fmt, hook_text, cta_text, sub_style, ass_path, end_t, trim_start):
     """ffmpeg -vf zinciri oluştur."""
     parts = []
+    # Emoji temizle — ffmpeg drawtext emoji işleyemez
+    hook_text = strip_emoji(hook_text) if hook_text else ""
+    cta_text = strip_emoji(cta_text) if cta_text else ""
 
     # 1. Format/crop
     if fmt == "9:16":
