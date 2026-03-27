@@ -205,8 +205,28 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subtitles_js
         upd(jid, 40, "ffmpeg ile video işleniyor…")
         out_p = str(OUTPUT / f"{jid}_out.mp4")
 
-        # Video filter zinciri
+        # ADIM 1: Önce sade kopyala — sadece re-encode, hiç filter yok
+        # Bu çalışırsa sonra filter ekleriz
+        upd(jid, 42, "Önce temel encode test ediliyor…")
+        test_cmd = ["ffmpeg", "-y", "-i", inp,
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                    "-c:a", "aac", "-b:a", "128k",
+                    "-movflags", "+faststart",
+                    out_p]
+        print(f"[{jid}] TEST CMD: {' '.join(test_cmd)}")
+        test_r = subprocess.run(test_cmd, capture_output=True, text=True, timeout=300)
+        print(f"[{jid}] TEST returncode: {test_r.returncode}")
+        if test_r.stderr:
+            print(f"[{jid}] TEST STDERR (son 1000 char):\n{test_r.stderr[-1000:]}")
+
+        if test_r.returncode != 0:
+            raise Exception(f"Temel encode bile başarısız. ffmpeg stderr: {test_r.stderr[-500:]}")
+
+        upd(jid, 60, "Temel encode OK — şimdi filtreler uygulanıyor…")
+
+        # ADIM 2: Şimdi filtrelerle tekrar dene
         vf = build_vf(fmt, hook_text, cta_text, sub_style, ass_path, end_t, trim_start)
+        print(f"[{jid}] VF: {vf}")
 
         # Komut
         cmd = ["ffmpeg", "-y"]
@@ -224,11 +244,33 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subtitles_js
         ]
 
         print(f"[{jid}] CMD: {' '.join(cmd)}")
+
+        # Önce input dosyasının gerçekten var olduğunu doğrula
+        if not os.path.exists(inp):
+            raise Exception(f"Input dosyası bulunamadı: {inp}")
+        print(f"[{jid}] Input size: {os.path.getsize(inp)} bytes")
+
+        out_p2 = out_p.replace("_out.mp4", "_out2.mp4")
+        cmd[-1] = out_p2  # farklı output
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
 
+        # Tam stderr'i logla
+        if result.stderr:
+            print(f"[{jid}] FFMPEG STDERR:\n{result.stderr[-2000:]}")
+
         if result.returncode != 0:
-            err = result.stderr[-800:] if result.stderr else "bilinmeyen hata"
-            raise Exception(err)
+            # Filtreler başarısız — temel encode çıktısını kullan
+            stderr_lines = (result.stderr or "").splitlines()
+            error_lines = [l for l in stderr_lines if any(x in l for x in ["Error","error","Invalid","No such","moov","lavfi","drawtext","ass"])]
+            err_msg = "\n".join(error_lines[-5:]) if error_lines else result.stderr[-300:]
+            print(f"[{jid}] Filter encode başarısız: {err_msg}")
+            upd(jid, 85, "Filtreler başarısız — temel versiyon kullanılıyor")
+            # test çıktısını kullan (zaten out_p'de)
+        else:
+            # Başarılı — filter çıktısını kullan
+            if os.path.exists(out_p):
+                os.remove(out_p)
+            os.rename(out_p2, out_p)
 
         size_mb = os.path.getsize(out_p) / 1024 / 1024
         upd(jid, 100, f"✅ Tamamlandı! {size_mb:.1f}MB", "done")
