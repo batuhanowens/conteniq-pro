@@ -607,6 +607,7 @@ async function renderVideo() {
   fd.append("sub_style", S.sub);
   fd.append("cta", content.cta || "");
   fd.append("subtitles", JSON.stringify(content.subtitles || []));
+  fd.append("content", JSON.stringify(content)); // tam içerik AI edit plan için
   fd.append("trim_start", $("t0").value || "0");
   fd.append("trim_end", $("t1").value || "0");
   fd.append("use_whisper", $("use-whisper").checked ? "true" : "false");
