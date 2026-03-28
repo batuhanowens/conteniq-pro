@@ -1,4 +1,4 @@
-import os, uuid, json, subprocess, threading, re
+import os, uuid, json, subprocess, threading, re, unicodedata
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
@@ -10,63 +10,78 @@ UPLOAD = Path("uploads"); UPLOAD.mkdir(exist_ok=True)
 OUTPUT = Path("outputs"); OUTPUT.mkdir(exist_ok=True)
 JOBS = {}
 
-# ── Font yolu — birden fazla yere bak ──────────────
 def find_font():
-    candidates = [
+    for c in [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
         "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
-    ]
-    for c in candidates:
+    ]:
         if os.path.exists(c):
             return c
-    # Son çare: sistem fontlarını tara
     try:
-        r = subprocess.run(["fc-list", ":style=Bold", "--format=%{file}\n"],
-                           capture_output=True, text=True, timeout=5)
+        r = subprocess.run(["fc-list",":style=Bold","--format=%{file}\n"], capture_output=True, text=True, timeout=5)
         for line in r.stdout.strip().splitlines():
             f = line.strip()
-            if f and os.path.exists(f):
-                return f
-    except:
-        pass
+            if f and os.path.exists(f): return f
+    except: pass
     return None
 
 FONT_PATH = find_font()
 print(f"[startup] Font: {FONT_PATH}")
 
-# ── STATIC ──────────────────────────────────────────
+def clean_text(text):
+    """Emoji ve drawtext'te sorun çıkaran karakterleri temizle."""
+    result = []
+    for char in text:
+        cp = ord(char)
+        # Emoji blokları
+        if (0x1F000 <= cp <= 0x1FFFF or 0x2600 <= cp <= 0x27BF or
+            0xFE00 <= cp <= 0xFE0F or cp == 0x200D or cp == 0xFEFF):
+            continue
+        result.append(char)
+    cleaned = ''.join(result).strip()
+    cleaned = re.sub(r'  +', ' ', cleaned)
+    return cleaned
+
+def escape_drawtext(text):
+    """ffmpeg drawtext için escape."""
+    text = clean_text(text)
+    text = text.replace('\\', '\\\\')
+    text = text.replace("'", "\u2019")   # tek tırnak → curly
+    text = text.replace(':', '\\:')
+    text = text.replace(',', '\\,')
+    text = text.replace('[', '\\[')
+    text = text.replace(']', '\\]')
+    text = text.replace('%', '\\%')
+    return text
+
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
 
-# ── HEALTH ──────────────────────────────────────────
 @app.route("/api/health")
 def health():
     try:
-        r = subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5)
-        ffmpeg_ok = r.returncode == 0
-    except:
-        ffmpeg_ok = False
-    return jsonify({"ok": True, "ffmpeg": ffmpeg_ok, "font": FONT_PATH})
+        r = subprocess.run(["ffmpeg","-version"], capture_output=True, timeout=5)
+        ffok = r.returncode == 0
+    except: ffok = False
+    return jsonify({"ok": True, "ffmpeg": ffok, "font": FONT_PATH})
 
-# ── GENERATE CONTENT ────────────────────────────────
 @app.route("/api/generate", methods=["POST"])
 def generate():
     import requests as req
     data = request.json or {}
-    api_key = request.headers.get("X-Api-Key", "")
+    api_key = request.headers.get("X-Api-Key","")
     if not api_key:
-        return jsonify({"error": "API key gerekli"}), 400
+        return jsonify({"error":"API key gerekli"}), 400
 
-    sector   = data.get("sector", "Genel")
-    city     = data.get("city", "Türkiye")
-    goal     = data.get("goal", "Müşteri")
-    audience = data.get("audience", "genel")
-    detail   = data.get("detail", "")
+    sector   = data.get("sector","Genel")
+    city     = data.get("city","Türkiye")
+    goal     = data.get("goal","Müşteri")
+    audience = data.get("audience","genel")
+    detail   = data.get("detail","")
     has_vid  = data.get("hasVideo", False)
 
     prompt = f"""Sen Türkiye pazarında uzman, yüksek dönüşüm odaklı bir sosyal medya stratejisti ve kısa video (Reels/TikTok) içerik üretim uzmanısın.
@@ -79,10 +94,10 @@ Kullanıcı bilgileri:
 {f"- Detay: {detail}" if detail else ""}
 - Video: {"Yüklendi" if has_vid else "Yok"}
 
-7 adet Reels içeriği üret. SADECE JSON döndür (başka hiçbir şey yazma):
-{{"meta":{{"sector":"{sector}","city":"{city}","goal":"{goal}"}},"contents":[{{"num":1,"angle":"tema","hook":"max 10 kelime hook asla merhaba yok","video_flow":[{{"scene":1,"desc":"Hook sahnesi","duration":"0-3sn"}},{{"scene":2,"desc":"Problem","duration":"3-8sn"}},{{"scene":3,"desc":"Değer","duration":"8-15sn"}},{{"scene":4,"desc":"Kanıt","duration":"15-22sn"}},{{"scene":5,"desc":"CTA","duration":"22-27sn"}}],"script":"max 100 kelime direkt kameraya","subtitles":[{{"text":"altyazı 1","highlight":["VURGU"]}},{{"text":"altyazı 2","highlight":["KELİME"]}}],"trigger":"aciliyet mesajı","cta":"tek net aksiyon","caption":"2-3 satış cümlesi","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"]}}]}}
-
-7 içerik üret: fırsat, sır, hata, kanıt, karşılaştırma, bilgi, duygusal. Sektöre çok özel, Türkçe."""
+7 adet Reels içeriği üret. ÖNEMLI: Hook ve CTA metinlerinde EMOJI KULLANMA — sadece Türkçe kelimeler.
+SADECE JSON döndür:
+{{"meta":{{"sector":"{sector}","city":"{city}","goal":"{goal}"}},"contents":[{{"num":1,"angle":"tema","hook":"max 10 kelime emoji yok","video_flow":[{{"scene":1,"desc":"Hook sahnesi","duration":"0-3sn"}},{{"scene":2,"desc":"Problem","duration":"3-8sn"}},{{"scene":3,"desc":"Deger","duration":"8-15sn"}},{{"scene":4,"desc":"Kanit","duration":"15-22sn"}},{{"scene":5,"desc":"CTA","duration":"22-27sn"}}],"script":"max 100 kelime direkt kameraya","subtitles":[{{"text":"altyazi 1","highlight":["VURGU"]}},{{"text":"altyazi 2","highlight":["KELIME"]}}],"trigger":"aciliyet mesaji","cta":"tek net aksiyon emoji yok","caption":"2-3 satis cumlesi","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"]}}]}}
+7 icerik uret: firsat, sir, hata, kanit, karsilastirma, bilgi, duygusal. Sektore ozel, Turkce."""
 
     try:
         r = req.post(
@@ -94,82 +109,74 @@ Kullanıcı bilgileri:
         )
         d = r.json()
         if "error" in d:
-            return jsonify({"error": d["error"]["message"]}), 400
+            return jsonify({"error":d["error"]["message"]}), 400
         raw = "".join(x["text"] for x in d["content"] if x.get("type")=="text")
-        raw = re.sub(r"```json|```", "", raw).strip()
+        raw = re.sub(r"```json|```","",raw).strip()
         return jsonify(json.loads(raw))
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}), 500
 
-# ── PROCESS VIDEO ────────────────────────────────────
 @app.route("/api/process", methods=["POST"])
 def process_video():
-    api_key = request.headers.get("X-Api-Key", "")
+    api_key = request.headers.get("X-Api-Key","")
     if "video" not in request.files:
-        return jsonify({"error": "Video gerekli"}), 400
+        return jsonify({"error":"Video gerekli"}), 400
 
-    video_file     = request.files["video"]
-    hook_text      = request.form.get("hook", "")
-    fmt            = request.form.get("format", "9:16")
-    sub_style      = request.form.get("sub_style", "viral")
-    cta_text       = request.form.get("cta", "")
-    subtitles_json = request.form.get("subtitles", "[]")
-    trim_start     = float(request.form.get("trim_start", 0) or 0)
-    trim_end       = float(request.form.get("trim_end", 0) or 0)
-    use_whisper    = request.form.get("use_whisper", "true") == "true"
+    vf         = request.files["video"]
+    hook_text  = request.form.get("hook","")
+    fmt        = request.form.get("format","9:16")
+    sub_style  = request.form.get("sub_style","viral")
+    cta_text   = request.form.get("cta","")
+    subs_json  = request.form.get("subtitles","[]")
+    t0         = float(request.form.get("trim_start",0) or 0)
+    t1         = float(request.form.get("trim_end",0) or 0)
+    use_wh     = request.form.get("use_whisper","true") == "true"
 
-    job_id = str(uuid.uuid4())[:8]
-    ext = Path(video_file.filename).suffix or ".mp4"
-    input_path = str(UPLOAD / f"{job_id}_in{ext}")
-    video_file.save(input_path)
+    jid = str(uuid.uuid4())[:8]
+    ext = Path(vf.filename).suffix or ".mp4"
+    inp = str(UPLOAD / f"{jid}_in{ext}")
+    vf.save(inp)
 
-    JOBS[job_id] = {"status":"queued","progress":0,"msg":"Başlatılıyor…"}
-    t = threading.Thread(target=run_job, args=(
-        job_id, input_path, api_key,
-        hook_text, fmt, sub_style, cta_text,
-        subtitles_json, trim_start, trim_end, use_whisper
-    ))
+    JOBS[jid] = {"status":"queued","progress":0,"msg":"Baslatiliyor..."}
+    t = threading.Thread(target=run_job, args=(jid,inp,api_key,hook_text,fmt,sub_style,cta_text,subs_json,t0,t1,use_wh))
     t.daemon = True
     t.start()
-    return jsonify({"job_id": job_id})
+    return jsonify({"job_id":jid})
 
 def upd(jid, p, msg, status="running"):
     JOBS[jid] = {"status":status,"progress":p,"msg":msg}
     print(f"[{jid}] {p}% {msg}")
 
-def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subtitles_json, trim_start, trim_end, use_whisper):
+def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subs_json, t0, t1, use_wh):
     try:
         import requests as req
 
-        # ── 1. PROBE ────────────────────────────────
-        upd(jid, 5, "Video analiz ediliyor…")
+        upd(jid, 5, "Video analiz ediliyor...")
         probe = subprocess.run(
             ["ffprobe","-v","quiet","-print_format","json","-show_streams","-show_format",inp],
             capture_output=True, text=True, timeout=30
         )
         info = json.loads(probe.stdout)
         duration = float(info["format"]["duration"])
-        vs = next((s for s in info["streams"] if s["codec_type"]=="video"), {})
-        vw = int(vs.get("width", 1920))
-        vh = int(vs.get("height", 1080))
-        upd(jid, 10, f"Video: {vw}×{vh}, {duration:.1f}s")
+        vs = next((s for s in info["streams"] if s["codec_type"]=="video"),{})
+        vw = int(vs.get("width",1920))
+        vh = int(vs.get("height",1080))
+        upd(jid, 10, f"Video: {vw}x{vh}, {duration:.1f}s")
 
-        end_t = trim_end if trim_end > trim_start > 0 or (trim_end > 0 and trim_start == 0) else duration
-        if trim_end <= trim_start:
-            end_t = duration
+        end_t = t1 if (t1 > t0 and t1 > 0) else duration
 
-        # ── 2. WHISPER ──────────────────────────────
+        # ── WHISPER ──────────────────────────────────
         ass_path = None
-        if use_whisper and api_key:
-            upd(jid, 15, "Whisper: ses çıkarılıyor…")
+        if use_wh and api_key:
+            upd(jid, 15, "Whisper: ses cikariliyor...")
             try:
-                audio_p = inp.replace("_in","_aud") + ".mp3"
+                aud = inp.replace("_in","_aud") + ".mp3"
                 subprocess.run(
-                    ["ffmpeg","-y","-i",inp,"-vn","-ar","16000","-ac","1","-b:a","64k",audio_p],
+                    ["ffmpeg","-y","-i",inp,"-vn","-ar","16000","-ac","1","-b:a","64k",aud],
                     capture_output=True, check=True, timeout=120
                 )
-                upd(jid, 22, "Whisper: transkript alınıyor…")
-                with open(audio_p,"rb") as f:
+                upd(jid, 22, "Whisper: transkript aliniyor...")
+                with open(aud,"rb") as f:
                     wr = req.post(
                         "https://api.openai.com/v1/audio/transcriptions",
                         headers={"Authorization":f"Bearer {api_key}"},
@@ -179,308 +186,253 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subtitles_js
                               "timestamp_granularities[]":"word"},
                         timeout=120
                     )
-                try: os.remove(audio_p)
+                try: os.remove(aud)
                 except: pass
+
                 if wr.status_code == 200:
                     wd = wr.json()
-                    words = wd.get("words", [])
+                    words = wd.get("words",[])
                     if words:
                         ass_path = inp.replace("_in","_sub").replace(Path(inp).suffix,".ass")
-                        write_whisper_ass(words, ass_path, sub_style, fmt)
-                        upd(jid, 35, f"Whisper: {len(words)} kelime alındı ✓")
+                        write_ass_whisper(words, ass_path, sub_style, fmt, hook_text, cta_text, end_t - t0)
+                        upd(jid, 35, f"Whisper: {len(words)} kelime OK")
                     else:
-                        upd(jid, 35, "Whisper kelime bulamadı — AI altyazı kullanılıyor")
-                        ass_path = write_ai_ass(subtitles_json, duration, inp, sub_style, fmt)
+                        upd(jid, 35, "Whisper kelime bulamadi - AI altyazi")
+                        ass_path = write_ass_ai(subs_json, duration, inp, sub_style, fmt, hook_text, cta_text, end_t - t0)
                 else:
-                    upd(jid, 35, f"Whisper hata {wr.status_code} — AI altyazı")
-                    ass_path = write_ai_ass(subtitles_json, duration, inp, sub_style, fmt)
+                    upd(jid, 35, f"Whisper hata {wr.status_code}")
+                    ass_path = write_ass_ai(subs_json, duration, inp, sub_style, fmt, hook_text, cta_text, end_t - t0)
             except Exception as e:
-                upd(jid, 35, f"Whisper başarısız ({e}) — AI altyazı")
-                ass_path = write_ai_ass(subtitles_json, duration, inp, sub_style, fmt)
+                upd(jid, 35, f"Whisper basarisiz: {e}")
+                ass_path = write_ass_ai(subs_json, duration, inp, sub_style, fmt, hook_text, cta_text, end_t - t0)
         else:
-            upd(jid, 35, "AI altyazı hazırlanıyor…")
-            ass_path = write_ai_ass(subtitles_json, duration, inp, sub_style, fmt)
+            upd(jid, 35, "AI altyazi hazirlaniyor...")
+            ass_path = write_ass_ai(subs_json, duration, inp, sub_style, fmt, hook_text, cta_text, end_t - t0)
 
-        # ── 3. FFMPEG ───────────────────────────────
-        upd(jid, 40, "ffmpeg ile video işleniyor…")
+        # ── FFMPEG ───────────────────────────────────
+        upd(jid, 40, "ffmpeg ile video isleniyor...")
         out_p = str(OUTPUT / f"{jid}_out.mp4")
 
-        # ADIM 1: Önce sade kopyala — sadece re-encode, hiç filter yok
-        # Bu çalışırsa sonra filter ekleriz
-        upd(jid, 42, "Önce temel encode test ediliyor…")
-        test_cmd = ["ffmpeg", "-y", "-i", inp,
-                    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-                    "-c:a", "aac", "-b:a", "128k",
-                    "-movflags", "+faststart",
-                    out_p]
-        print(f"[{jid}] TEST CMD: {' '.join(test_cmd)}")
-        test_r = subprocess.run(test_cmd, capture_output=True, text=True, timeout=300)
-        print(f"[{jid}] TEST returncode: {test_r.returncode}")
-        if test_r.stderr:
-            print(f"[{jid}] TEST STDERR (son 1000 char):\n{test_r.stderr[-1000:]}")
+        # Sadece crop/scale — drawtext YOK, her şey ASS içinde
+        vf_parts = []
 
-        if test_r.returncode != 0:
-            raise Exception(f"Temel encode bile başarısız. ffmpeg stderr: {test_r.stderr[-500:]}")
+        if fmt == "9:16":
+            vf_parts.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920")
+        elif fmt == "1:1":
+            vf_parts.append("crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=1080:1080")
+        elif fmt == "16:9":
+            vf_parts.append("scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black")
 
-        upd(jid, 60, "Temel encode OK — şimdi filtreler uygulanıyor…")
+        if ass_path and os.path.exists(ass_path):
+            # ass filtresi virgül içerdiği için ayrı ekle
+            vf_parts.append(f"ass={ass_path}")
 
-        # ADIM 2: Şimdi filtrelerle tekrar dene
-        vf = build_vf(fmt, hook_text, cta_text, sub_style, ass_path, end_t, trim_start)
-        print(f"[{jid}] VF: {vf}")
-
-        # Komut
         cmd = ["ffmpeg", "-y"]
-        if trim_start > 0:
-            cmd += ["-ss", str(trim_start)]
+        if t0 > 0:
+            cmd += ["-ss", str(t0)]
         cmd += ["-i", inp]
-        if trim_end > 0 and trim_end > trim_start:
-            cmd += ["-t", str(trim_end - trim_start)]
-        if vf:
-            cmd += ["-vf", vf]
-        cmd += [
-            "-c:v","libx264","-preset","fast","-crf","20",
-            "-c:a","aac","-b:a","128k","-movflags","+faststart",
-            out_p
-        ]
+        if t1 > 0 and t1 > t0:
+            cmd += ["-t", str(t1 - t0)]
+        if vf_parts:
+            cmd += ["-vf", ",".join(vf_parts)]
+        cmd += ["-c:v","libx264","-preset","fast","-crf","20",
+                "-c:a","aac","-b:a","128k","-movflags","+faststart", out_p]
 
         print(f"[{jid}] CMD: {' '.join(cmd)}")
-
-        # Önce input dosyasının gerçekten var olduğunu doğrula
-        if not os.path.exists(inp):
-            raise Exception(f"Input dosyası bulunamadı: {inp}")
-        print(f"[{jid}] Input size: {os.path.getsize(inp)} bytes")
-
-        out_p2 = out_p.replace("_out.mp4", "_out2.mp4")
-        cmd[-1] = out_p2  # farklı output
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-
-        # Tam stderr'i logla
+        print(f"[{jid}] returncode: {result.returncode}")
         if result.stderr:
-            print(f"[{jid}] FFMPEG STDERR:\n{result.stderr[-2000:]}")
+            # Sadece hata satırlarını logla
+            err_lines = [l for l in result.stderr.splitlines()
+                        if any(x in l for x in ["Error","error","Invalid","failed","No such","ass","sub"])]
+            if err_lines:
+                print(f"[{jid}] STDERR errors:\n" + "\n".join(err_lines[-10:]))
 
         if result.returncode != 0:
-            # Filtreler başarısız — temel encode çıktısını kullan
-            stderr_lines = (result.stderr or "").splitlines()
-            error_lines = [l for l in stderr_lines if any(x in l for x in ["Error","error","Invalid","No such","moov","lavfi","drawtext","ass"])]
-            err_msg = "\n".join(error_lines[-5:]) if error_lines else result.stderr[-300:]
-            print(f"[{jid}] Filter encode başarısız: {err_msg}")
-            upd(jid, 85, "Filtreler başarısız — temel versiyon kullanılıyor")
-            # test çıktısını kullan (zaten out_p'de)
+            # ASS olmadan tekrar dene
+            upd(jid, 70, "ASS hatali - altyazisiz tekrar deneniyor...")
+            cmd2 = ["ffmpeg","-y"]
+            if t0 > 0: cmd2 += ["-ss",str(t0)]
+            cmd2 += ["-i",inp]
+            if t1 > 0 and t1 > t0: cmd2 += ["-t",str(t1-t0)]
+            vf2 = [p for p in vf_parts if not p.startswith("ass=")]
+            if vf2: cmd2 += ["-vf",",".join(vf2)]
+            cmd2 += ["-c:v","libx264","-preset","fast","-crf","20",
+                     "-c:a","aac","-b:a","128k","-movflags","+faststart",out_p]
+            print(f"[{jid}] CMD2: {' '.join(cmd2)}")
+            r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600)
+            print(f"[{jid}] CMD2 returncode: {r2.returncode}")
+            if r2.returncode != 0:
+                print(f"[{jid}] CMD2 STDERR:\n{r2.stderr[-500:]}")
+                raise Exception(f"ffmpeg basarisiz (returncode {r2.returncode})")
+            upd(jid, 90, "Altyazisiz versiyon tamamlandi")
         else:
-            # Başarılı — filter çıktısını kullan
-            if os.path.exists(out_p):
-                os.remove(out_p)
-            os.rename(out_p2, out_p)
+            upd(jid, 90, "Video islendi")
 
         size_mb = os.path.getsize(out_p) / 1024 / 1024
-        upd(jid, 100, f"✅ Tamamlandı! {size_mb:.1f}MB", "done")
+        upd(jid, 100, f"Tamamlandi! {size_mb:.1f}MB", "done")
 
-        # Temizlik
         for p in [inp, ass_path]:
             try:
                 if p and os.path.exists(p): os.remove(p)
             except: pass
 
     except Exception as e:
-        upd(jid, 0, f"Hata: {str(e)[:300]}", "error")
-        print(f"[{jid}] ERROR: {e}")
+        upd(jid, 0, f"Hata: {str(e)[:400]}", "error")
+        print(f"[{jid}] EXCEPTION: {e}")
 
-
-def strip_emoji(text):
-    """ffmpeg drawtext emoji desteklemez — temizle."""
-    import unicodedata
-    result = []
-    for char in text:
-        cp = ord(char)
-        if (0x1F000 <= cp <= 0x1FFFF or
-            0x2600 <= cp <= 0x27BF or
-            0xFE00 <= cp <= 0xFE0F or
-            cp == 0x200D):
-            continue
-        result.append(char)
-    cleaned = ''.join(result).strip()
-    # Çift boşlukları temizle
-    import re
-    return re.sub(r'  +', ' ', cleaned)
-
-def build_vf(fmt, hook_text, cta_text, sub_style, ass_path, end_t, trim_start):
-    """ffmpeg -vf zinciri oluştur."""
-    parts = []
-    # Emoji temizle — ffmpeg drawtext emoji işleyemez
-    hook_text = strip_emoji(hook_text) if hook_text else ""
-    cta_text = strip_emoji(cta_text) if cta_text else ""
-
-    # 1. Format/crop
-    if fmt == "9:16":
-        parts.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920")
-    elif fmt == "1:1":
-        parts.append("crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=1080:1080")
-    elif fmt == "16:9":
-        parts.append("scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black")
-
-    # 2. Hook (ilk 3 saniye) — font yoksa box only
-    if hook_text and sub_style != "none":
-        safe = hook_text.replace("\\","\\\\").replace("'","\\'").replace(":","\\:").replace(",","\\,")
-        fs = 72 if fmt in ("9:16","1:1") else 74
-        box = box_color(sub_style)
-        if FONT_PATH:
-            parts.append(
-                f"drawtext=text='{safe}':fontfile='{FONT_PATH}':"
-                f"fontsize={fs}:fontcolor=white:x=(w-text_w)/2:y=h*0.47:"
-                f"enable='between(t,0,3)':box=1:{box}"
-            )
-        else:
-            parts.append(
-                f"drawtext=text='{safe}':"
-                f"fontsize={fs}:fontcolor=white:x=(w-text_w)/2:y=h*0.47:"
-                f"enable='between(t,0,3)':box=1:{box}"
-            )
-
-    # 3. CTA (son 5 saniye)
-    if cta_text and sub_style != "none":
-        safe = cta_text.replace("\\","\\\\").replace("'","\\'").replace(":","\\:").replace(",","\\,")
-        dur = end_t - trim_start
-        cta_t = max(0, dur - 5)
-        fs = 52 if fmt in ("9:16","1:1") else 54
-        if FONT_PATH:
-            parts.append(
-                f"drawtext=text='{safe}':fontfile='{FONT_PATH}':"
-                f"fontsize={fs}:fontcolor=white:x=(w-text_w)/2:y=h*0.88:"
-                f"enable='gte(t,{cta_t:.1f})':"
-                f"box=1:boxcolor=0xff5c35@0.92:boxborderw=24"
-            )
-        else:
-            parts.append(
-                f"drawtext=text='{safe}':"
-                f"fontsize={fs}:fontcolor=white:x=(w-text_w)/2:y=h*0.88:"
-                f"enable='gte(t,{cta_t:.1f})':"
-                f"box=1:boxcolor=0xff5c35@0.92:boxborderw=24"
-            )
-
-    # 4. ASS altyazı
-    if ass_path and os.path.exists(ass_path):
-        # ass filtresi virgül içerdiği için ayrı ele al
-        parts.append(f"ass='{ass_path}'")
-
-    return ",".join(parts)
-
-def box_color(style):
-    m = {
-        "viral":   "boxcolor=black@0.88:boxborderw=22",
-        "tiktok":  "boxcolor=0xff0050@0.92:boxborderw=22",
-        "yellow":  "boxcolor=black@0.75:boxborderw=18",
-        "minimal": "boxcolor=black@0.6:boxborderw=16",
-        "fire":    "boxcolor=0xff5c35@0.88:boxborderw=22",
-        "none":    "boxcolor=black@0:boxborderw=0",
-    }
-    return m.get(style, m["viral"])
+# ── ASS YAZMA ────────────────────────────────────────
 
 def ts(sec):
-    """Saniye → ASS timestamp."""
+    sec = max(0, sec)
     h = int(sec // 3600)
     m = int((sec % 3600) // 60)
     s = int(sec % 60)
     cs = int((sec % 1) * 100)
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
-def ass_header(fmt, sub_style):
+def ass_styles(fmt, sub_style):
     if fmt == "9:16":   pw, ph = 1080, 1920
     elif fmt == "1:1":  pw, ph = 1080, 1080
     else:               pw, ph = 1920, 1080
-    fs = int(pw * 0.052)
-    mv = int(ph * 0.15)
+
+    # Hook için büyük stil, altyazı için normal stil, CTA için renkli
+    fs_hook = int(pw * 0.062)
+    fs_sub  = int(pw * 0.048)
+    fs_cta  = int(pw * 0.044)
+    mv      = int(ph * 0.12)
+
     colors = {
-        "viral":   ("&H00FFFFFF","&H00000000"),
-        "tiktok":  ("&H00FFFFFF","&H000050FF"),
-        "yellow":  ("&H0055CCFF","&H00000000"),
-        "minimal": ("&H00FFFFFF","&H00000000"),
-        "fire":    ("&H005C35FF","&H000000FF"),
+        "viral":   ("&H00FFFFFF","&H00000000","&H80000000"),
+        "tiktok":  ("&H00FFFFFF","&H000050FF","&H80000000"),
+        "yellow":  ("&H0055CCFF","&H00000000","&H80000000"),
+        "minimal": ("&H00FFFFFF","&H00000000","&HB4000000"),
+        "fire":    ("&H005C35FF","&H000000FF","&H80000000"),
     }
-    tc, oc = colors.get(sub_style, colors["viral"])
-    fn = "Arial"
-    return f"""[Script Info]
+    tc, oc, bc = colors.get(sub_style, colors["viral"])
+
+    header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {pw}
 PlayResY: {ph}
+WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{fn},{fs},{tc},&H00FFFFFF,{oc},&H80000000,-1,0,0,0,100,100,0,0,1,3,1,2,20,20,{mv},1
+Style: Hook,Arial,{fs_hook},{tc},&H00FFFFFF,{oc},{bc},-1,0,0,0,100,100,0,0,1,4,2,5,30,30,{int(ph*0.45)},1
+Style: Sub,Arial,{fs_sub},{tc},&H00FFFFFF,{oc},{bc},-1,0,0,0,100,100,0,0,1,3,1,2,20,20,{mv},1
+Style: CTA,Arial,{fs_cta},&H00FFFFFF,&H00FFFFFF,&H000050FF,&H900050FF,-1,0,0,0,100,100,0,0,1,0,0,2,20,20,{int(ph*0.08)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-""", pw, ph
+"""
+    return header, pw, ph
 
-def write_whisper_ass(words, path, style, fmt):
-    """Whisper kelimelerinden ASS yaz — 4 kelimelik gruplar, aktif kelime vurgulanır."""
-    header, pw, ph = ass_header(fmt, style)
+def write_ass_whisper(words, path, style, fmt, hook_text, cta_text, total_dur):
+    """Whisper + hook + CTA hepsini tek ASS dosyasına yaz."""
+    header, pw, ph = ass_styles(fmt, style)
     lines = []
-    group = 5  # kaç kelime yan yana
 
+    # Hook — ilk 3 saniye, ortada büyük
+    if hook_text:
+        h = clean_text(hook_text)
+        lines.append(f"Dialogue: 0,{ts(0)},{ts(3)},Hook,,0,0,0,,{{\\an5}}{h}")
+
+    # Whisper altyazıları — 4'lü gruplar
+    group = 4
     for i in range(0, len(words), group):
         g = words[i:i+group]
         t_s = ts(g[0]["start"])
-        t_e = ts(g[-1]["end"] + 0.15)
-        # Her kelime için karaoke tag
+        t_e = ts(g[-1]["end"] + 0.2)
+        # Aktif kelimeyi bold yap
         parts = []
         for w in g:
-            dur_cs = int((w["end"] - w["start"]) * 100)
-            word = w["word"].strip()
-            # Aktif kelimeyi büyük bold yap
-            parts.append(f"{{\\kf{dur_cs}}}{{\\b1}}{word}{{\\b0}}")
+            word = clean_text(w["word"].strip())
+            parts.append(f"{{\\b1}}{word}{{\\b0}}")
         text = " ".join(parts)
-        lines.append(f"Dialogue: 0,{t_s},{t_e},Default,,0,0,0,,{text}")
+        lines.append(f"Dialogue: 0,{t_s},{t_e},Sub,,0,0,0,,{text}")
+
+    # CTA — son 5 saniye
+    if cta_text and total_dur > 5:
+        c = clean_text(cta_text)
+        cta_start = max(3.5, total_dur - 5)
+        lines.append(f"Dialogue: 0,{ts(cta_start)},{ts(total_dur)},CTA,,0,0,0,,{{\\an2}}{c}")
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(header + "\n".join(lines))
 
-def write_ai_ass(subtitles_json, duration, inp, style, fmt):
-    """AI subtitle'lardan ASS yaz."""
+def write_ass_ai(subs_json, duration, inp, style, fmt, hook_text, cta_text, total_dur):
+    """AI altyazıları + hook + CTA ASS dosyasına yaz."""
     try:
-        subs = json.loads(subtitles_json)
-        if not subs:
-            return None
-        header, pw, ph = ass_header(fmt, style)
-        seg = (duration * 0.65) / len(subs)
-        start = duration * 0.08
+        subs = json.loads(subs_json)
+        header, pw, ph = ass_styles(fmt, style)
         lines = []
-        for i, sub in enumerate(subs):
-            t_s = ts(start + i * seg)
-            t_e = ts(start + (i+1) * seg - 0.1)
-            hl = [h.upper() for h in sub.get("highlight", [])]
-            words = sub.get("text","").split()
-            parts = []
-            for w in words:
-                clean = re.sub(r"[^\wğüşöçıĞÜŞÖÇİ]","",w.upper())
-                if clean in hl:
-                    parts.append(f"{{\\b1}}{{\\c&H0055CCFF&}}{w}{{\\b0}}{{\\c&HFFFFFF&}}")
-                else:
-                    parts.append(w)
-            lines.append(f"Dialogue: 0,{t_s},{t_e},Default,,0,0,0,,{' '.join(parts)}")
+
+        # Hook
+        if hook_text:
+            h = clean_text(hook_text)
+            lines.append(f"Dialogue: 0,{ts(0)},{ts(3)},Hook,,0,0,0,,{{\\an5}}{h}")
+
+        # AI altyazılar
+        if subs:
+            seg = (total_dur * 0.65) / len(subs)
+            start = total_dur * 0.1
+            for i, sub in enumerate(subs):
+                t_s = ts(start + i * seg)
+                t_e = ts(start + (i+1) * seg - 0.15)
+                hl = [x.upper().strip() for x in sub.get("highlight",[])]
+                words = clean_text(sub.get("text","")).split()
+                parts = []
+                for w in words:
+                    wc = re.sub(r"[^\w]","",w.upper())
+                    if wc in hl:
+                        parts.append(f"{{\\b1}}{{\\c&H0055CCFF&}}{w}{{\\b0}}{{\\c&HFFFFFF&}}")
+                    else:
+                        parts.append(w)
+                lines.append(f"Dialogue: 0,{t_s},{t_e},Sub,,0,0,0,,{' '.join(parts)}")
+
+        # CTA
+        if cta_text and total_dur > 5:
+            c = clean_text(cta_text)
+            cta_start = max(3.5, total_dur - 5)
+            lines.append(f"Dialogue: 0,{ts(cta_start)},{ts(total_dur)},CTA,,0,0,0,,{{\\an2}}{c}")
+
         path = inp.replace("_in","_ai").replace(Path(inp).suffix,".ass")
         with open(path,"w",encoding="utf-8") as f:
             f.write(header + "\n".join(lines))
         return path
     except Exception as e:
-        print(f"write_ai_ass error: {e}")
+        print(f"write_ass_ai error: {e}")
         return None
 
-# ── JOB STATUS ──────────────────────────────────────
 @app.route("/api/status/<jid>")
 def status(jid):
     job = JOBS.get(jid)
-    if not job:
-        return jsonify({"error":"Bulunamadı"}), 404
+    if not job: return jsonify({"error":"Bulunamadi"}), 404
     return jsonify(job)
 
-# ── DOWNLOAD ────────────────────────────────────────
 @app.route("/api/download/<jid>")
 def download(jid):
     p = OUTPUT / f"{jid}_out.mp4"
-    if not p.exists():
-        return jsonify({"error":"Dosya yok"}), 404
+    print(f"[download] {jid} - exists={p.exists()} - size={p.stat().st_size if p.exists() else 0}")
+    if not p.exists(): return jsonify({"error":"Dosya yok"}), 404
     return send_file(str(p), mimetype="video/mp4",
                      as_attachment=True, download_name=f"conteniq-{jid}.mp4")
+
+@app.route("/api/debug/<jid>")
+def debug_job(jid):
+    """Job detaylarini goster."""
+    job = JOBS.get(jid, {})
+    out_p = OUTPUT / f"{jid}_out.mp4"
+    inp_files = list(UPLOAD.glob(f"{jid}*"))
+    out_files = list(OUTPUT.glob(f"{jid}*"))
+    return jsonify({
+        "job": job,
+        "output_exists": out_p.exists(),
+        "output_size_mb": round(out_p.stat().st_size/1024/1024, 2) if out_p.exists() else 0,
+        "upload_files": [str(f) for f in inp_files],
+        "output_files": [str(f) for f in out_files],
+    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
