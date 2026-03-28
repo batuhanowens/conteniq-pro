@@ -1,4 +1,4 @@
-import os, uuid, json, subprocess, threading, re, unicodedata
+import os, uuid, json, subprocess, threading, re
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
@@ -16,11 +16,11 @@ def find_font():
         "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-        "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
     ]:
         if os.path.exists(c): return c
     try:
-        r = subprocess.run(["fc-list",":style=Bold","--format=%{file}\n"], capture_output=True, text=True, timeout=5)
+        r = subprocess.run(["fc-list",":style=Bold","--format=%{file}\n"],
+                           capture_output=True, text=True, timeout=5)
         for line in r.stdout.strip().splitlines():
             f = line.strip()
             if f and os.path.exists(f): return f
@@ -31,7 +31,6 @@ FONT_PATH = find_font()
 print(f"[startup] Font: {FONT_PATH}")
 
 def clean(text):
-    """Emoji ve özel karakterleri temizle."""
     result = []
     for char in text:
         cp = ord(char)
@@ -43,9 +42,168 @@ def clean(text):
 
 def ts(sec):
     sec = max(0, float(sec))
-    h = int(sec // 3600); m = int((sec % 3600) // 60)
-    s = int(sec % 60); cs = int((sec % 1) * 100)
+    h=int(sec//3600); m=int((sec%3600)//60); s=int(sec%60); cs=int((sec%1)*100)
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
+# ════════════════════════════════════════════════════
+# İÇERİK TİPİ = EDİT MOTORU
+# Her angle farklı bir video karakteri üretir
+# ════════════════════════════════════════════════════
+
+ANGLE_PROFILES = {
+    "firsat": {
+        "label": "Fırsat Kaçırma",
+        # Renk: kırmızı+sarı — aciliyet
+        "hook_color":   "&H000000FF",   # kırmızı (ASS BGR)
+        "hi_primary":   "&H0055CCFF",   # sarı
+        "hi_secondary": "&H000080FF",   # turuncu
+        "outline":      "&H00000000",
+        "shadow":       "&HCC000000",
+        "font_scale":   115,
+        "sub_size_ratio": 0.068,
+        "hook_size_ratio": 0.088,
+        # Zamanlama: agresif, hızlı
+        "hook_dur":     2.5,           # hook kısa ve güçlü
+        "sub_words":    3,             # az kelime, hızlı okunur
+        "sub_gap":      0.1,           # kelimeler arası boşluk az
+        # Zoom effect ffmpeg
+        "zoom_filter":  "zoompan=z='if(lte(zoom,1.0),1.04,max(1.001,zoom-0.002))':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=720x1280:fps=30",
+        "use_zoom":     False,         # RAM sorunu için kapalı
+        # AI prompt karakteri
+        "prompt_tone":  "ACİL ve SERT. Acele ettir. 'Son fırsat', 'kaçırma', 'şimdi' kelimelerini kullan. Hook maksimum 8 kelime.",
+        "cta_style":    "urgent",      # 'Hemen DM at' gibi
+    },
+    "sir": {
+        "label": "Sır / İçeriden Bilgi",
+        "hook_color":   "&H00FF00FF",   # mor/purple
+        "hi_primary":   "&H00FF00FF",
+        "hi_secondary": "&H0055CCFF",
+        "outline":      "&H00000000",
+        "shadow":       "&H88000000",
+        "font_scale":   100,
+        "sub_size_ratio": 0.058,
+        "hook_size_ratio": 0.078,
+        "hook_dur":     3.5,
+        "sub_words":    5,
+        "sub_gap":      0.15,
+        "use_zoom":     False,
+        "prompt_tone":  "GİZEMLİ ve merak uyandırıcı. 'Kimse bilmiyor', 'gizli', 'içeriden' kelimelerini kullan. Yavaş ve emin bir ton.",
+        "cta_style":    "curious",
+    },
+    "hata": {
+        "label": "Yaygın Hata",
+        "hook_color":   "&H000000FF",   # kırmızı
+        "hi_primary":   "&H0055CCFF",   # sarı (YANLIŞ kelimesi)
+        "hi_secondary": "&H0000FF00",   # yeşil (DOGRU kelimesi)
+        "outline":      "&H00000000",
+        "shadow":       "&HCC000000",
+        "font_scale":   108,
+        "sub_size_ratio": 0.062,
+        "hook_size_ratio": 0.082,
+        "hook_dur":     3.0,
+        "sub_words":    4,
+        "sub_gap":      0.12,
+        "use_zoom":     False,
+        "prompt_tone":  "UYARICI ve net. 'Hata', 'yanlış', 'dikkat' kelimelerini kullan. İzleyicide 'ben de mi yapıyorum?' hissi yarat.",
+        "cta_style":    "help",
+    },
+    "kanit": {
+        "label": "Sosyal Kanıt",
+        "hook_color":   "&H0000FF00",   # yeşil — güven
+        "hi_primary":   "&H0000FF00",
+        "hi_secondary": "&H0055CCFF",
+        "outline":      "&H00000000",
+        "shadow":       "&H88000000",
+        "font_scale":   105,
+        "sub_size_ratio": 0.060,
+        "hook_size_ratio": 0.080,
+        "hook_dur":     3.0,
+        "sub_words":    5,
+        "sub_gap":      0.15,
+        "use_zoom":     False,
+        "prompt_tone":  "GÜVENİLİR ve samimi. Gerçek müşteri hikayesi, rakam, sonuç. 'Müşterim', 'kanıtlandı', 'gerçek sonuç' kullan.",
+        "cta_style":    "trust",
+    },
+    "karsilastirma": {
+        "label": "Karşılaştırma",
+        "hook_color":   "&H00FFFFFF",
+        "hi_primary":   "&H0000FF00",   # yeşil = iyi
+        "hi_secondary": "&H000000FF",   # kırmızı = kötü
+        "outline":      "&H00000000",
+        "shadow":       "&HAA000000",
+        "font_scale":   108,
+        "sub_size_ratio": 0.060,
+        "hook_size_ratio": 0.080,
+        "hook_dur":     3.0,
+        "sub_words":    4,
+        "sub_gap":      0.12,
+        "use_zoom":     False,
+        "prompt_tone":  "KONTRAST ve net. 'VS', 'fark', 'hangisi daha iyi'. İki seçenek sun, birini öner.",
+        "cta_style":    "choice",
+    },
+    "bilgi": {
+        "label": "Bilgi / Eğitim",
+        "hook_color":   "&H00FFFFFF",
+        "hi_primary":   "&H005CCCFF",   # açık mavi
+        "hi_secondary": "&H0055CCFF",
+        "outline":      "&H00000000",
+        "shadow":       "&H88000000",
+        "font_scale":   100,
+        "sub_size_ratio": 0.056,
+        "hook_size_ratio": 0.076,
+        "hook_dur":     3.5,
+        "sub_words":    6,
+        "sub_gap":      0.18,
+        "use_zoom":     False,
+        "prompt_tone":  "BİLGİLENDİRİCİ ve güvenilir. Rakam, adım, liste formatı kullan. Sade ve net.",
+        "cta_style":    "learn",
+    },
+    "duygusal": {
+        "label": "Duygusal Bağ",
+        "hook_color":   "&H00FF8080",   # açık pembe
+        "hi_primary":   "&H00FF8080",
+        "hi_secondary": "&H0055CCFF",
+        "outline":      "&H00000000",
+        "shadow":       "&H88000000",
+        "font_scale":   100,
+        "sub_size_ratio": 0.056,
+        "hook_size_ratio": 0.076,
+        "hook_dur":     4.0,           # yavaş, etki bırakır
+        "sub_words":    5,
+        "sub_gap":      0.20,          # kelimeler arası nefes var
+        "use_zoom":     False,
+        "prompt_tone":  "DUYGUSAL ve samimi. Kişisel hikaye, empati, 'ben de yaşadım' hissi. Yavaş ve derin.",
+        "cta_style":    "connect",
+    },
+}
+
+CTA_STYLES = {
+    "urgent":  "Hemen DM at — gecikme",
+    "curious": "DM yaz — sana anlatayin",
+    "help":    "DM at — dogru yolu goster",
+    "trust":   "DM at — senin icin bakalim",
+    "choice":  "DM at — en iyisini sec",
+    "learn":   "Takip et — her gun paylasiyorum",
+    "connect": "DM yaz — seninle konusalim",
+}
+
+def get_angle_profile(angle_str):
+    a = (angle_str or "").lower()
+    for key in ANGLE_PROFILES:
+        if key in a: return ANGLE_PROFILES[key]
+    # fuzzy match
+    mapping = {
+        "firsat":"firsat","kaçırma":"firsat","urgency":"firsat",
+        "sır":"sir","gizli":"sir","secret":"sir",
+        "hata":"hata","yanlis":"hata","error":"hata",
+        "kanit":"kanit","sosyal":"kanit","proof":"kanit",
+        "karsi":"karsilastirma","vs":"karsilastirma",
+        "bilgi":"bilgi","egitim":"bilgi","info":"bilgi",
+        "duygu":"duygusal","emotion":"duygusal",
+    }
+    for k, v in mapping.items():
+        if k in a: return ANGLE_PROFILES[v]
+    return ANGLE_PROFILES.get("bilgi")  # default: sakin
 
 # ── ROUTES ──────────────────────────────────────────
 
@@ -58,7 +216,8 @@ def health():
         r = subprocess.run(["ffmpeg","-version"], capture_output=True, timeout=5)
         ffok = r.returncode == 0
     except: ffok = False
-    return jsonify({"ok": True, "ffmpeg": ffok, "font": FONT_PATH})
+    return jsonify({"ok":True,"ffmpeg":ffok,"font":FONT_PATH,
+                    "angles": list(ANGLE_PROFILES.keys())})
 
 @app.route("/api/generate", methods=["POST"])
 def generate():
@@ -73,35 +232,53 @@ def generate():
     audience = data.get("audience","genel")
     detail   = data.get("detail","")
 
-    prompt = f"""Sen Türkiye pazarında uzman, yüksek dönüşüm odaklı bir sosyal medya stratejisti ve kısa video içerik üretim uzmanısın.
+    # Her angle için ayrı prompt tonu
+    angle_instructions = ""
+    for key, p in ANGLE_PROFILES.items():
+        angle_instructions += f"\n- {p['label']}: {p['prompt_tone']}"
 
-Kullanıcı bilgileri:
+    prompt = f"""Sen Türkiye pazarında uzman sosyal medya stratejisti ve Reels içerik uzmanısın.
+
+Bilgiler:
 - Sektör: {sector}
 - Şehir: {city}
 - Hedef: {goal}
 - Hedef Kitle: {audience}
 {f"- Detay: {detail}" if detail else ""}
 
-7 adet Reels içeriği üret. ONEMLI KURALLAR:
-1. Hook ve CTA metinlerinde KESINLIKLE EMOJI KULLANMA
-2. Tüm metinler sade Türkçe olmalı
-3. Her içerik farklı bir açıdan: fırsat, sır, hata, kanıt, karşılaştırma, bilgi, duygusal
+7 farklı Reels içeriği üret. Her içerik farklı bir psikolojik tetikleyici kullanmalı.
+İçerik tipleri ve tonları:{angle_instructions}
 
-SADECE JSON döndür:
-{{"meta":{{"sector":"{sector}","city":"{city}","goal":"{goal}"}},"contents":[{{"num":1,"angle":"tema","hook":"max 10 kelime hook emoji yok","video_flow":[{{"scene":1,"desc":"Hook sahnesi","duration":"0-3sn"}},{{"scene":2,"desc":"Problem","duration":"3-8sn"}},{{"scene":3,"desc":"Deger","duration":"8-15sn"}},{{"scene":4,"desc":"Kanit","duration":"15-22sn"}},{{"scene":5,"desc":"CTA","duration":"22-27sn"}}],"script":"max 100 kelime direkt kameraya","subtitles":[{{"text":"altyazi 1","highlight":["VURGU"]}},{{"text":"altyazi 2","highlight":["KELIME"]}}],"trigger":"aciliyet mesaji","cta":"tek net aksiyon emoji yok","caption":"2-3 satis cumlesi","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"]}}]}}
-7 icerik uret. Sektore cok ozel, dönüsüm odakli, Turkce."""
+KURALLAR:
+1. Hook ve CTA metinlerinde KESİNLİKLE EMOJI KULLANMA
+2. Her içerik kendi tonuna SADIK olsun — fırsat acil, sır gizemli, duygusal samimi
+3. highlight listesi: o angle'a uygun vurgu kelimeleri (max 3)
+4. cta: o angle'ın CTA stiline uygun
+
+SADECE JSON:
+{{"meta":{{"sector":"{sector}","city":"{city}","goal":"{goal}"}},"contents":[{{"num":1,"angle":"firsat","hook":"max 10 kelime hook","video_flow":[{{"scene":1,"desc":"Hook","duration":"0-3sn"}},{{"scene":2,"desc":"Problem","duration":"3-8sn"}},{{"scene":3,"desc":"Deger","duration":"8-15sn"}},{{"scene":4,"desc":"Kanit","duration":"15-22sn"}},{{"scene":5,"desc":"CTA","duration":"22-27sn"}}],"script":"max 100 kelime","subtitles":[{{"text":"altyazi 1","highlight":["VURGU1","VURGU2"]}},{{"text":"altyazi 2","highlight":["VURGU3"]}}],"trigger":"mesaj","cta":"tek aksiyon","caption":"2-3 cumle","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"]}}]}}
+
+angle degerleri: firsat, sir, hata, kanit, karsilastirma, bilgi, duygusal
+7 icerik uret, her biri farkli angle. Sektore ozel, Turkce."""
 
     try:
         r = req.post(
             "https://api.anthropic.com/v1/messages",
             headers={"Content-Type":"application/json","x-api-key":api_key,"anthropic-version":"2023-06-01"},
-            json={"model":"claude-sonnet-4-20250514","max_tokens":4000,"messages":[{"role":"user","content":prompt}]},
+            json={"model":"claude-sonnet-4-20250514","max_tokens":4000,
+                  "messages":[{"role":"user","content":prompt}]},
             timeout=90
         )
         d = r.json()
         if "error" in d: return jsonify({"error":d["error"]["message"]}), 400
         raw = re.sub(r"```json|```","","".join(x["text"] for x in d["content"] if x.get("type")=="text")).strip()
-        return jsonify(json.loads(raw))
+        result = json.loads(raw)
+        # Her içeriğe CTA stilini ekle
+        for c in result.get("contents",[]):
+            ap = get_angle_profile(c.get("angle",""))
+            if not c.get("cta") or c["cta"] == "tek aksiyon":
+                c["cta"] = CTA_STYLES.get(ap.get("cta_style","help"),"DM yaz")
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error":str(e)}), 500
 
@@ -110,43 +287,24 @@ def process_video():
     api_key = request.headers.get("X-Api-Key","")
     if "video" not in request.files: return jsonify({"error":"Video gerekli"}), 400
 
-    vf         = request.files["video"]
-    # İçerik verileri
-    content_json = request.form.get("content","{}") # Tam içerik objesi
-    fmt        = request.form.get("format","9:16")
-    sub_style  = request.form.get("sub_style","viral")
-    t0         = float(request.form.get("trim_start",0) or 0)
-    t1         = float(request.form.get("trim_end",0) or 0)
-    use_wh     = request.form.get("use_whisper","true") == "true"
-    # Geriye uyumluluk
-    hook_text  = request.form.get("hook","")
-    cta_text   = request.form.get("cta","")
-    subs_json  = request.form.get("subtitles","[]")
+    vf          = request.files["video"]
+    content_raw = request.form.get("content","{}")
+    fmt         = request.form.get("format","9:16")
+    t0          = float(request.form.get("trim_start",0) or 0)
+    t1          = float(request.form.get("trim_end",0) or 0)
+    use_wh      = request.form.get("use_whisper","true") == "true"
+
+    try: content = json.loads(content_raw)
+    except: content = {}
 
     jid = str(uuid.uuid4())[:8]
     ext = Path(vf.filename).suffix or ".mp4"
     inp = str(UPLOAD / f"{jid}_in{ext}")
     vf.save(inp)
 
-    # Content parse
-    try:
-        content = json.loads(content_json)
-    except:
-        content = {}
-
-    if not hook_text and content.get("hook"):
-        hook_text = content["hook"]
-    if not cta_text and content.get("cta"):
-        cta_text = content["cta"]
-    if subs_json == "[]" and content.get("subtitles"):
-        subs_json = json.dumps(content["subtitles"])
-
     JOBS[jid] = {"status":"queued","progress":0,"msg":"Baslatiliyor..."}
-    t = threading.Thread(target=run_job, args=(
-        jid, inp, api_key, content,
-        hook_text, fmt, sub_style, cta_text,
-        subs_json, t0, t1, use_wh
-    ))
+    t = threading.Thread(target=run_job,
+        args=(jid, inp, api_key, content, fmt, t0, t1, use_wh))
     t.daemon = True; t.start()
     return jsonify({"job_id":jid})
 
@@ -154,11 +312,10 @@ def upd(jid, p, msg, status="running"):
     JOBS[jid] = {"status":status,"progress":p,"msg":msg}
     print(f"[{jid}] {p}% {msg}")
 
-def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, subs_json, t0, t1, use_wh):
+def run_job(jid, inp, api_key, content, fmt, t0, t1, use_wh):
     try:
         import requests as req
 
-        # ── 1. PROBE ────────────────────────────────
         upd(jid, 5, "Video analiz ediliyor...")
         probe = subprocess.run(
             ["ffprobe","-v","quiet","-print_format","json","-show_streams","-show_format",inp],
@@ -167,19 +324,18 @@ def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, sub
         info = json.loads(probe.stdout)
         duration = float(info["format"]["duration"])
         vs = next((s for s in info["streams"] if s["codec_type"]=="video"),{})
-        vw = int(vs.get("width",1920)); vh = int(vs.get("height",1080))
+        vw=int(vs.get("width",1920)); vh=int(vs.get("height",1080))
         upd(jid, 10, f"Video: {vw}x{vh}, {duration:.1f}s")
 
         end_t = t1 if (t1 > t0 and t1 > 0) else duration
         total_dur = end_t - t0
 
-        # ── 2. AI VIDEO ANALİZİ ──────────────────────
-        # Sektöre ve içeriğe göre edit planı oluştur
-        upd(jid, 12, "AI video edit planı oluşturuyor...")
-        edit_plan = create_edit_plan(content, total_dur, api_key, req)
-        print(f"[{jid}] Edit plan: {json.dumps(edit_plan, ensure_ascii=False)[:200]}")
+        # Angle profilini al — bu video'nun karakterini belirler
+        angle = content.get("angle","bilgi")
+        profile = get_angle_profile(angle)
+        upd(jid, 12, f"Angle: {profile['label']} | Stil: {profile['prompt_tone'][:40]}...")
 
-        # ── 3. WHISPER ──────────────────────────────
+        # Whisper
         whisper_words = []
         if use_wh and api_key:
             upd(jid, 15, "Whisper: ses analiz ediliyor...")
@@ -202,30 +358,32 @@ def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, sub
                     )
                 try: os.remove(aud)
                 except: pass
-
                 if wr.status_code == 200:
                     wd = wr.json()
                     whisper_words = wd.get("words",[])
-                    upd(jid, 32, f"Whisper: {len(whisper_words)} kelime alindi")
+                    upd(jid, 32, f"Whisper: {len(whisper_words)} kelime OK")
+                    # AI vurgu seçimi — angle'a göre farklı kelimeler seçer
+                    if whisper_words:
+                        whisper_words = ai_highlights(whisper_words, content, profile, api_key, req)
                 else:
                     upd(jid, 32, f"Whisper hata {wr.status_code}")
             except Exception as e:
                 upd(jid, 32, f"Whisper basarisiz: {e}")
 
-        # ── 4. ASS DOSYASI OLUŞTURUp ─────────────────
-        upd(jid, 35, "Altyazilar hazirlaniyor...")
-        ass_path = build_ass(
-            jid, inp, whisper_words, subs_json,
-            edit_plan, hook_text, cta_text,
-            sub_style, fmt, total_dur, t0
-        )
+        # ASS — angle profiline göre tamamen farklı görünüm
+        upd(jid, 36, f"Altyazilar hazirlaniyor ({profile['label']})...")
+        hook_text = clean(content.get("hook",""))
+        cta_text  = clean(content.get("cta",""))
+        subs      = content.get("subtitles",[])
 
-        # ── 5. FFMPEG ───────────────────────────────
-        upd(jid, 45, "Video isleniyor (ffmpeg)...")
+        ass_path = build_ass(jid, inp, whisper_words, subs,
+                             hook_text, cta_text, fmt, total_dur, t0, profile)
+
+        # ffmpeg
+        upd(jid, 45, "ffmpeg ile video isleniyor...")
         out_p = str(OUTPUT / f"{jid}_out.mp4")
 
         vf_parts = []
-        # Crop/scale
         if fmt == "9:16":
             vf_parts.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=720:1280")
         elif fmt == "1:1":
@@ -233,14 +391,13 @@ def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, sub
         elif fmt == "16:9":
             vf_parts.append("scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black")
 
-        # ASS altyazı
         if ass_path and os.path.exists(ass_path):
             vf_parts.append(f"ass={ass_path}")
 
         cmd = ["ffmpeg","-y"]
         if t0 > 0: cmd += ["-ss", str(t0)]
         cmd += ["-i", inp]
-        if t1 > 0 and t1 > t0: cmd += ["-t", str(t1 - t0)]
+        if t1 > 0 and t1 > t0: cmd += ["-t", str(t1-t0)]
         if vf_parts: cmd += ["-vf", ",".join(vf_parts)]
         cmd += ["-c:v","libx264","-preset","ultrafast","-crf","26",
                 "-threads","1","-c:a","aac","-b:a","96k",
@@ -251,8 +408,8 @@ def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, sub
         print(f"[{jid}] returncode: {result.returncode}")
 
         if result.returncode != 0:
-            # ASS olmadan fallback
-            upd(jid, 70, "Altyazisiz versiyon deneniyor...")
+            # Fallback
+            upd(jid, 70, "ASS hatali — altyazisiz deneniyor...")
             cmd2 = ["ffmpeg","-y"]
             if t0 > 0: cmd2 += ["-ss", str(t0)]
             cmd2 += ["-i", inp]
@@ -264,12 +421,12 @@ def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, sub
                      "-movflags","+faststart", out_p]
             r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600)
             if r2.returncode != 0:
-                raise Exception(f"ffmpeg basarisiz (returncode {r2.returncode})\n{r2.stderr[-300:]}")
+                raise Exception(f"ffmpeg basarisiz rc={r2.returncode}")
             upd(jid, 90, "Altyazisiz versiyon tamamlandi")
         else:
-            upd(jid, 90, "Video tamamlandi")
+            upd(jid, 90, f"{profile['label']} stili uygulandı")
 
-        size_mb = os.path.getsize(out_p) / 1024 / 1024
+        size_mb = os.path.getsize(out_p)/1024/1024
         upd(jid, 100, f"Tamamlandi! {size_mb:.1f}MB", "done")
 
         for p in [inp, ass_path]:
@@ -281,108 +438,78 @@ def run_job(jid, inp, api_key, content, hook_text, fmt, sub_style, cta_text, sub
         upd(jid, 0, f"Hata: {str(e)[:400]}", "error")
         print(f"[{jid}] EXCEPTION: {e}")
 
-# ── AI EDIT PLANI ────────────────────────────────────
-
-def create_edit_plan(content, total_dur, api_key, req):
-    """
-    Claude'a içeriği ve video süresini vererek edit planı yaptır.
-    Hook ne zaman, altyazılar ne zaman, CTA ne zaman — hepsini hesaplar.
-    """
-    if not api_key or not content:
-        return default_edit_plan(total_dur)
-
+def ai_highlights(words, content, profile, api_key, req):
+    """Angle'a göre farklı kelimeler vurgular.
+    Fırsat: aciliyet kelimeleri | Sır: gizemli kelimeler | Hata: yanlış/doğru"""
     try:
+        full_text = " ".join(w["word"] for w in words)
+        angle_label = profile.get("label","")
+        prompt_tone = profile.get("prompt_tone","")
         hook = clean(content.get("hook",""))
-        cta  = clean(content.get("cta",""))
-        subs = content.get("subtitles",[])
-        script = content.get("script","")
-        video_flow = content.get("video_flow",[])
 
-        prompt = f"""Sen profesyonel bir video editörüsün. Aşağıdaki Reels videosu için tam edit planı yap.
+        prompt = f"""Video transkripti: "{full_text[:400]}"
+Hook: "{hook}"
+İçerik tipi: {angle_label}
+Bu tip için ton: {prompt_tone}
 
-Video süresi: {total_dur:.1f} saniye
-Hook metni: {hook}
-CTA metni: {cta}
-Script: {script[:200] if script else "yok"}
-Video akışı: {json.dumps(video_flow, ensure_ascii=False)}
-Altyazı sayısı: {len(subs)}
+Bu içerik tipine göre hangi kelimeler vurgulanmalı?
+- Fırsat için: SON, KAÇIRMA, ŞİMDİ, HEMEN gibi aciliyet kelimeleri
+- Sır için: GİZLİ, KIMSE, BİLMİYOR gibi merak kelimeleri  
+- Hata için: YANLIŞ, HATA, DİKKAT kelimeleri
+- Kanıt için: MÜŞTERI, SONUÇ, GERÇEK, RAKAM kelimeleri
 
-Kurallar:
-- Hook ilk 0-3 saniyede gösterilmeli, büyük ve dikkat çekici
-- Altyazılar konuşmaya göre dağıtılmalı ({total_dur:.0f} saniyeye eşit yayılsın)
-- CTA son 5 saniyede çıkmalı
-- Her altyazı max 3-4 saniye ekranda durmalı
-
-SADECE JSON döndür:
-{{
-  "hook_start": 0.0,
-  "hook_end": 3.0,
-  "cta_start": {max(3.0, total_dur - 5.0):.1f},
-  "cta_end": {total_dur:.1f},
-  "subtitle_slots": [
-    {{"idx": 0, "start": 3.5, "end": 7.0}},
-    {{"idx": 1, "start": 7.5, "end": 12.0}}
-  ],
-  "hook_size": "large",
-  "hook_position": "center",
-  "sub_position": "bottom",
-  "style_notes": "kisa aciklama"
-}}"""
+SADECE JSON: {{"highlights": ["kelime1","kelime2","kelime3"]}}"""
 
         r = req.post(
             "https://api.anthropic.com/v1/messages",
             headers={"Content-Type":"application/json","x-api-key":api_key,"anthropic-version":"2023-06-01"},
-            json={"model":"claude-sonnet-4-20250514","max_tokens":800,
+            json={"model":"claude-sonnet-4-20250514","max_tokens":200,
                   "messages":[{"role":"user","content":prompt}]},
-            timeout=30
+            timeout=15
         )
         d = r.json()
         if "error" in d: raise Exception(d["error"]["message"])
         raw = re.sub(r"```json|```","","".join(x["text"] for x in d["content"] if x.get("type")=="text")).strip()
-        plan = json.loads(raw)
-        print(f"AI edit plan OK: {plan.get('style_notes','')}")
-        return plan
+        hl = set(w.upper() for w in json.loads(raw).get("highlights",[]))
+        for w in words:
+            wc = re.sub(r"[^\wğüşöçıĞÜŞÖÇİ]","",w["word"]).upper()
+            w["highlight"] = wc in hl
+        return words
     except Exception as e:
-        print(f"create_edit_plan error: {e}")
-        return default_edit_plan(total_dur)
+        print(f"ai_highlights error: {e}")
+        for w in words:
+            w["highlight"] = w["word"].upper() == w["word"] and len(w["word"].strip()) > 2
+        return words
 
-def default_edit_plan(total_dur):
-    """AI yoksa varsayılan plan."""
-    n_subs = 3
-    sub_start = 3.5
-    sub_seg = max(3.0, (total_dur - 8) / n_subs)
-    slots = [{"idx":i,"start":sub_start + i*sub_seg,"end":sub_start + (i+1)*sub_seg - 0.3}
-             for i in range(n_subs)]
-    return {
-        "hook_start": 0.0, "hook_end": 3.0,
-        "cta_start": max(3.5, total_dur - 5.0), "cta_end": total_dur,
-        "subtitle_slots": slots,
-        "hook_size": "large", "hook_position": "center", "sub_position": "bottom"
-    }
+def build_ass(jid, inp, whisper_words, subs, hook_text, cta_text,
+              fmt, total_dur, t0, profile):
+    try:
+        if fmt == "9:16":   pw, ph = 720, 1280
+        elif fmt == "1:1":  pw, ph = 720, 720
+        else:               pw, ph = 1280, 720
 
-# ── ASS OLUŞTURMA ────────────────────────────────────
+        # Boyutlar — angle'a göre farklı
+        fs_hook = int(pw * profile.get("hook_size_ratio", 0.082))
+        fs_sub  = int(pw * profile.get("sub_size_ratio", 0.062))
+        fs_cta  = int(pw * 0.052)
+        fscale  = profile.get("font_scale", 105)
 
-def get_ass_header(fmt, sub_style):
-    if fmt == "9:16":   pw, ph = 720, 1280
-    elif fmt == "1:1":  pw, ph = 720, 720
-    else:               pw, ph = 1280, 720
+        # SAFE ZONE marjinleri (9:16 için):
+        # Üst yasak: ~%18, Alt yasak: ~%27
+        # Hook: %38-48 arası (güvenli orta)
+        # Altyazı: %55-68 arası (güvenli alt-orta)
+        # CTA: %72-80 (güvenli alt)
+        hook_mv = int(ph * 0.42)   # Hook: safe zone ortası
+        sub_mv  = int(ph * 0.30)   # Altyazı: \an2 ile alttan bu marjin
+        cta_mv  = int(ph * 0.20)   # CTA: biraz daha aşağı
 
-    fs_hook = int(pw * 0.072)   # büyük hook
-    fs_sub  = int(pw * 0.054)   # normal altyazı
-    fs_cta  = int(pw * 0.048)   # CTA
-    mv_top  = int(ph * 0.42)    # hook için dikey marj (ortaya yakın)
-    mv_bot  = int(ph * 0.06)    # altyazı için alt marj
+        hc  = profile.get("hook_color",  "&H00FFFFFF")
+        hi1 = profile.get("hi_primary",  "&H0055CCFF")
+        hi2 = profile.get("hi_secondary","&H0000FF00")
+        oc  = profile.get("outline",     "&H00000000")
+        sh  = profile.get("shadow",      "&HAA000000")
 
-    style_colors = {
-        "viral":   ("&H00FFFFFF","&H00000000","&HAA000000"),  # beyaz/siyah outline/koyu bg
-        "tiktok":  ("&H00FFFFFF","&H000050FF","&HAA000000"),
-        "yellow":  ("&H0055CCFF","&H00000000","&HAA000000"),
-        "minimal": ("&H00FFFFFF","&H00000000","&H88000000"),
-        "fire":    ("&H005C35FF","&H000000FF","&HAA000000"),
-    }
-    tc, oc, bc = style_colors.get(sub_style, style_colors["viral"])
-
-    return f"""[Script Info]
+        header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {pw}
 PlayResY: {ph}
@@ -390,121 +517,115 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hook,Arial,{fs_hook},{tc},&H00FFFFFF,{oc},{bc},-1,0,0,0,100,100,1,0,1,4,2,5,20,20,{mv_top},1
-Style: Sub,Arial,{fs_sub},{tc},&H00FFFFFF,{oc},{bc},-1,0,0,0,100,100,1,0,1,3,1,2,20,20,{mv_bot},1
-Style: CTA,Arial,{fs_cta},&H00000000,&H00FFFFFF,&H000050FF,&H990050FF,-1,0,0,0,100,100,1,0,1,0,0,2,20,20,{int(ph*0.06)},1
+Style: Hook,Arial,{fs_hook},{hc},&H00FFFFFF,{oc},{sh},-1,0,0,0,{fscale},{fscale},0.5,0,1,4,2,5,30,30,{hook_mv},1
+Style: Sub,Arial,{fs_sub},&H00FFFFFF,&H00FFFFFF,{oc},{sh},-1,0,0,0,{fscale},{fscale},0,0,1,3,1,2,20,20,{sub_mv},1
+Style: Hi1,Arial,{fs_sub},{hi1},&H00FFFFFF,{oc},{sh},-1,0,0,0,{int(fscale*1.08)},{int(fscale*1.08)},0,0,1,3,1,2,20,20,{sub_mv},1
+Style: Hi2,Arial,{fs_sub},{hi2},&H00FFFFFF,{oc},{sh},-1,0,0,0,{int(fscale*1.12)},{int(fscale*1.12)},0,0,1,3,1,2,20,20,{sub_mv},1
+Style: CTA,Arial,{fs_cta},&H00000000,&H00FFFFFF,{hi1},&H99000000,-1,0,0,0,{fscale},{fscale},1,0,1,0,0,2,20,20,{cta_mv},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-""", pw, ph
-
-def build_ass(jid, inp, whisper_words, subs_json, edit_plan, hook_text, cta_text, sub_style, fmt, total_dur, t0):
-    """Tüm overlay'leri içeren tek ASS dosyası oluştur."""
-    try:
-        header, pw, ph = get_ass_header(fmt, sub_style)
+"""
         lines = []
+        hook_dur = profile.get("hook_dur", 3.0)
 
         # ── HOOK ────────────────────────────────────
         if hook_text:
             h = clean(hook_text)
-            h_start = edit_plan.get("hook_start", 0.0)
-            h_end   = edit_plan.get("hook_end", 3.0)
-            # Uzun hook'u iki satıra böl
             words = h.split()
+            # Uzun hook → 2 satır
             if len(words) > 4:
                 mid = len(words) // 2
-                line1 = " ".join(words[:mid])
-                line2 = " ".join(words[mid:])
-                hook_text_fmt = f"{{\\b1}}{line1}\\N{{\\b1}}{line2}"
+                fmt_hook = f"{{\\b1}}{' '.join(words[:mid])}\\N{{\\b1}}{' '.join(words[mid:])}"
             else:
-                hook_text_fmt = f"{{\\b1}}{h}"
-            lines.append(f"Dialogue: 0,{ts(h_start)},{ts(h_end)},Hook,,0,0,0,,{{\\an5}}{hook_text_fmt}")
+                fmt_hook = f"{{\\b1}}{h}"
+            # an5 = tam orta (yatay+dikey center)
+            lines.append(f"Dialogue: 0,{ts(0)},{ts(hook_dur)},Hook,,0,0,0,,{{\\an5}}{fmt_hook}")
 
         # ── ALTYAZILAR ───────────────────────────────
-        slots = edit_plan.get("subtitle_slots", [])
+        sub_words = profile.get("sub_words", 4)
+        sub_gap   = profile.get("sub_gap", 0.12)
 
-        if whisper_words and len(whisper_words) > 0:
-            # Whisper var — gerçek kelime zamanlaması kullan
-            # t0 offset'i düzelt
-            adj_words = []
+        if whisper_words:
+            adj = []
             for w in whisper_words:
-                adj = {"word": w["word"], "start": w["start"] - t0, "end": w["end"] - t0}
-                if adj["start"] >= 3.0:  # Hook bittikten sonra başla
-                    adj_words.append(adj)
+                s = w["start"] - t0
+                e = w["end"] - t0
+                if s >= hook_dur + 0.3 and s <= total_dur - 5.5:
+                    adj.append({**w, "start":s, "end":e})
 
-            # 4'lü gruplar halinde satır oluştur
-            group_size = 4
-            for i in range(0, len(adj_words), group_size):
-                g = adj_words[i:i+group_size]
+            for i in range(0, len(adj), sub_words):
+                g = adj[i:i+sub_words]
                 if not g: continue
                 t_s = g[0]["start"]
-                t_e = g[-1]["end"] + 0.2
-                if t_s >= total_dur - 5.5: break  # CTA alanına girme
+                t_e = min(g[-1]["end"] + 0.2, total_dur - 5.5)
+                if t_s >= t_e: continue
 
-                # Aktif kelimeyi vurgula — karaoke stili
                 parts = []
                 for w in g:
                     word = clean(w["word"].strip())
                     if not word: continue
-                    # Büyük harfli kelimeler zaten vurgulu
-                    if word == word.upper() and len(word) > 2:
-                        parts.append(f"{{\\b1}}{{\\c&H0055CCFF&}}{word}{{\\b0}}{{\\c&HFFFFFF&}}")
+                    is_hl = w.get("highlight", False)
+                    if not is_hl and word.upper() == word and len(word) > 2:
+                        is_hl = True
+                    if is_hl:
+                        parts.append(f"{{\\rHi1}}{{\\b1}}{word}{{\\r}}")
                     else:
                         parts.append(word)
                 if parts:
-                    text = " ".join(parts)
-                    lines.append(f"Dialogue: 0,{ts(t_s)},{ts(t_e)},Sub,,0,0,0,,{text}")
-
+                    # an2 = alt-orta
+                    lines.append(f"Dialogue: 0,{ts(t_s)},{ts(t_e)},Sub,,0,0,0,,{{\\an2}}{' '.join(parts)}")
         else:
-            # Whisper yok — AI altyazıları edit planına göre yerleştir
-            try:
-                subs = json.loads(subs_json) if subs_json else []
-            except:
-                subs = []
+            available = total_dur - hook_dur - 0.3 - 5.5
+            if available > 0 and subs:
+                seg = available / len(subs)
+                for i, sub in enumerate(subs):
+                    t_s = hook_dur + 0.3 + i * seg
+                    t_e = min(t_s + seg - sub_gap, total_dur - 5.5)
+                    if t_s >= t_e: continue
 
-            for i, sub in enumerate(subs):
-                # Edit planından slot al, yoksa hesapla
-                if i < len(slots):
-                    slot = slots[i]
-                    t_s = slot["start"]
-                    t_e = slot["end"]
-                else:
-                    seg = max(3.0, (total_dur - 9) / max(len(subs),1))
-                    t_s = 3.5 + i * seg
-                    t_e = t_s + seg - 0.3
+                    hl_set = set(x.upper().strip() for x in sub.get("highlight",[]))
+                    words = clean(sub.get("text","")).split()
+                    if not words: continue
 
-                if t_s >= total_dur - 5.5: break  # CTA alanına girme
-                t_e = min(t_e, total_dur - 5.5)
-
-                hl = [x.upper().strip() for x in sub.get("highlight",[])]
-                words = clean(sub.get("text","")).split()
-                parts = []
-                for w in words:
-                    wc = re.sub(r"[^\wğüşöçıĞÜŞÖÇİ]","",w.upper())
-                    if wc in hl or (w == w.upper() and len(w) > 2):
-                        parts.append(f"{{\\b1}}{{\\c&H0055CCFF&}}{w}{{\\b0}}{{\\c&HFFFFFF&}}")
+                    # 2 satır max
+                    if len(words) > 5:
+                        mid = len(words) // 2
+                        for li, wlist in enumerate([words[:mid], words[mid:]]):
+                            lt_s = t_s + li * (seg/2)
+                            lt_e = lt_s + seg/2 - sub_gap
+                            parts = _style_words(wlist, hl_set)
+                            lines.append(f"Dialogue: 0,{ts(lt_s)},{ts(lt_e)},Sub,,0,0,0,,{{\\an2}}{' '.join(parts)}")
                     else:
-                        parts.append(w)
-                if parts:
-                    lines.append(f"Dialogue: 0,{ts(t_s)},{ts(t_e)},Sub,,0,0,0,,{' '.join(parts)}")
+                        parts = _style_words(words, hl_set)
+                        lines.append(f"Dialogue: 0,{ts(t_s)},{ts(t_e)},Sub,,0,0,0,,{{\\an2}}{' '.join(parts)}")
 
         # ── CTA ─────────────────────────────────────
         if cta_text:
             c = clean(cta_text)
-            cta_s = edit_plan.get("cta_start", max(3.5, total_dur - 5.0))
-            cta_e = edit_plan.get("cta_end", total_dur)
-            lines.append(f"Dialogue: 0,{ts(cta_s)},{ts(cta_e)},CTA,,0,0,0,,{{\\an2}}{{\\b1}}{c}")
+            cta_start = max(hook_dur + 0.5, total_dur - 5.0)
+            lines.append(f"Dialogue: 0,{ts(cta_start)},{ts(total_dur)},CTA,,0,0,0,,{{\\an2}}{{\\b1}}{c}")
 
         ass_path = inp.replace("_in","_sub").replace(Path(inp).suffix,".ass")
         with open(ass_path, "w", encoding="utf-8") as f:
             f.write(header + "\n".join(lines))
 
-        print(f"[{jid}] ASS: {len(lines)} satir yazildi")
+        print(f"[{jid}] ASS: {len(lines)} satir ({profile['label']})")
         return ass_path
 
     except Exception as e:
         print(f"[{jid}] build_ass error: {e}")
         return None
+
+def _style_words(words, hl_set):
+    parts = []
+    for w in words:
+        wc = re.sub(r"[^\wğüşöçıĞÜŞÖÇİ]","",w.upper())
+        if wc in hl_set or (w.upper() == w and len(w) > 2):
+            parts.append(f"{{\\rHi1}}{{\\b1}}{w}{{\\r}}")
+        else:
+            parts.append(w)
+    return parts
 
 # ── STATUS / DOWNLOAD ────────────────────────────────
 
@@ -517,20 +638,18 @@ def status(jid):
 @app.route("/api/download/<jid>")
 def download(jid):
     p = OUTPUT / f"{jid}_out.mp4"
-    print(f"[download] {jid} exists={p.exists()} size={p.stat().st_size if p.exists() else 0}")
     if not p.exists(): return jsonify({"error":"Dosya yok"}), 404
     return send_file(str(p), mimetype="video/mp4",
                      as_attachment=True, download_name=f"conteniq-{jid}.mp4")
 
 @app.route("/api/debug/<jid>")
 def debug_job(jid):
-    job = JOBS.get(jid, {})
+    job = JOBS.get(jid,{})
     out_p = OUTPUT / f"{jid}_out.mp4"
     return jsonify({
         "job": job,
         "output_exists": out_p.exists(),
-        "output_size_mb": round(out_p.stat().st_size/1024/1024, 2) if out_p.exists() else 0,
-        "output_files": [str(f) for f in OUTPUT.glob(f"{jid}*")],
+        "output_size_mb": round(out_p.stat().st_size/1024/1024,2) if out_p.exists() else 0,
     })
 
 if __name__ == "__main__":
