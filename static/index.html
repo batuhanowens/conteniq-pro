@@ -6,20 +6,20 @@
 <title>ConteniQ Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#07070f;--s1:#0e0e20;--s2:#141430;--s3:#1c1c3a;--b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);--a1:#ff5c35;--a2:#ff9a3c;--a3:#ffcc5c;--green:#2ddc8a;--blue:#4f8aff;--text:#f0eeff;--muted:rgba(240,238,255,.42);--muted2:rgba(240,238,255,.68);--glow:rgba(255,92,53,.22)}
+:root{--bg:#07070f;--s1:#0e0e20;--s2:#141430;--s3:#1c1c3a;--b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);--a1:#ff5c35;--a2:#ff9a3c;--a3:#ffcc5c;--green:#2ddc8a;--blue:#4f8aff;--purple:#8b5cf6;--text:#f0eeff;--muted:rgba(240,238,255,.42);--muted2:rgba(240,238,255,.68);--glow:rgba(255,92,53,.22)}
 *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 nav{display:flex;align-items:center;justify-content:space-between;padding:13px 26px;border-bottom:1px solid var(--b);background:rgba(7,7,15,.95);backdrop-filter:blur(20px);position:sticky;top:0;z-index:200}
 .logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:800}.logo em{color:var(--a1);font-style:normal}
 .nav-r{display:flex;align-items:center;gap:10px}
 .badge{border-radius:100px;padding:4px 12px;font-size:11px;font-weight:600}
-.badge-green{background:rgba(45,220,138,.1);border:1px solid rgba(45,220,138,.2);color:var(--green)}
-.badge-orange{background:rgba(255,92,53,.1);border:1px solid rgba(255,92,53,.2);color:var(--a1)}
-.layout{display:grid;grid-template-columns:290px 1fr 330px;min-height:calc(100vh - 53px)}
+.bg{background:rgba(45,220,138,.1);border:1px solid rgba(45,220,138,.2);color:var(--green)}
+.bo{background:rgba(255,92,53,.1);border:1px solid rgba(255,92,53,.2);color:var(--a1)}
+.layout{display:grid;grid-template-columns:290px 1fr 320px;min-height:calc(100vh - 53px)}
 .col{overflow-y:auto}
 .col-l{background:var(--s1);border-right:1px solid var(--b);padding:18px 15px;position:sticky;top:53px;height:calc(100vh - 53px)}
 .col-m{padding:22px 24px}
-.col-r{background:var(--s1);border-left:1px solid var(--b);padding:18px 15px;position:sticky;top:53px;height:calc(100vh - 53px)}
+.col-r{background:var(--s1);border-left:1px solid var(--b);padding:18px 15px;position:sticky;top:53px;height:calc(100vh - 53px);overflow-y:auto}
 label{display:block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;margin-top:12px}
 label:first-of-type{margin-top:0}
 select,input[type=text],input[type=number],input[type=password],textarea{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
@@ -41,46 +41,63 @@ hr{border:none;border-top:1px solid var(--b);margin:13px 0}
 .btn-p{width:100%;background:linear-gradient(135deg,var(--a1),var(--a2));border:none;border-radius:10px;padding:12px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 5px 20px var(--glow);margin-top:12px}
 .btn-p:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 9px 28px var(--glow)}.btn-p:disabled{opacity:.35;cursor:not-allowed;transform:none}
 .btn-g{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:9px;padding:10px;color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:7px}.btn-g:hover{color:var(--text)}
-.btn-green{width:100%;background:linear-gradient(135deg,var(--green),#18a85e);border:none;border-radius:9px;padding:11px;color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .25s;margin-bottom:7px}.btn-green:hover{transform:translateY(-1px)}
 .btn-sm{background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--muted2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}.btn-sm:hover{color:var(--text)}.btn-sm.ok{color:var(--green);border-color:rgba(45,220,138,.3)}
+.btn-blue{background:rgba(79,138,255,.12);border:1px solid rgba(79,138,255,.3);border-radius:7px;padding:6px 12px;font-size:11px;color:var(--blue);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .2s}.btn-blue:hover{background:rgba(79,138,255,.2)}
+/* EMPTY / LOADING */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px}
 .empty-ico{font-size:52px;margin-bottom:14px;opacity:.25}
 .empty h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--muted2);margin-bottom:7px}
-.empty p{font-size:13px;color:var(--muted);max-width:300px;line-height:1.7}
+.empty p{font-size:13px;color:var(--muted);max-width:320px;line-height:1.7}
 .loading{display:flex;flex-direction:column;align-items:center;padding:60px 20px;text-align:center}
 .spinner{width:52px;height:52px;border:3px solid var(--b2);border-top-color:var(--a1);border-radius:50%;animation:spin .75s linear infinite;margin-bottom:18px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .lsteps{display:flex;flex-direction:column;gap:7px;margin-top:16px;width:100%;max-width:320px}
 .lstep{display:flex;align-items:center;gap:9px;background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--muted2);transition:all .3s}
 .lstep.act{border-color:rgba(255,92,53,.3);color:var(--a2);background:rgba(255,92,53,.05)}.lstep.done{border-color:rgba(45,220,138,.25);color:var(--green)}
+/* CARDS */
 .res-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
 .res-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
 .res-meta{font-size:11px;color:var(--muted);margin-top:3px}
 .gbtns{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .gbtn{background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;color:var(--muted2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}.gbtn:hover{color:var(--text)}
 .gbtn.hi{background:rgba(255,92,53,.1);border-color:rgba(255,92,53,.3);color:var(--a1)}
-.card{background:var(--s1);border:1px solid var(--b);border-radius:14px;margin-bottom:11px;overflow:hidden}
-.card-hd{display:flex;align-items:center;gap:10px;padding:11px 15px;cursor:pointer;user-select:none;border-bottom:1px solid transparent;transition:border-color .2s}
+.card{background:var(--s1);border:1px solid var(--b);border-radius:14px;margin-bottom:11px;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:var(--b2)}
+.card-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;border-bottom:1px solid transparent}
 .card.open .card-hd{border-color:var(--b)}
-.cnum{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.cnum{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
 .cinfo{flex:1;min-width:0}
-.cangle{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
-.chook-p{font-size:11px;color:var(--muted2);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cangle{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.abadge{font-size:9px;padding:2px 7px;border-radius:100px;font-weight:700;letter-spacing:.3px;flex-shrink:0}
+.chook-p{font-size:11px;color:var(--muted2);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px}
 .cchev{font-size:12px;color:var(--muted);transition:transform .25s;flex-shrink:0}.card.open .cchev{transform:rotate(180deg)}
-.card-body{display:none;padding:15px}.card.open .card-body{display:block;animation:fadeup .2s ease}
-@keyframes fadeup{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
-.cs{margin-bottom:13px}.cs:last-child{margin-bottom:0}
-.csl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--a1);margin-bottom:6px}
+.card-body{display:none;padding:16px}.card.open .card-body{display:block;animation:fu .2s ease}
+@keyframes fu{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.cs{margin-bottom:14px}.cs:last-child{margin-bottom:0}
+.csl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--a1);margin-bottom:6px;display:flex;align-items:center;gap:5px}
 .csc{background:var(--s2);border-radius:9px;padding:11px 13px;font-size:12px;line-height:1.7}
-.csc.hook{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;border-left:3px solid var(--a1);background:rgba(255,92,53,.07)}
+.csc.hook{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;border-left:3px solid var(--a1);background:rgba(255,92,53,.07)}
 .csc.script{font-style:italic;border-left:3px solid var(--blue);background:rgba(79,138,255,.05)}
 .csc.cta{background:rgba(45,220,138,.08);border:1px solid rgba(45,220,138,.18);font-weight:700;font-size:13px;color:var(--green)}
-.csc.trig{border-left:3px solid #8b5cf6;background:rgba(139,92,246,.07);color:#c4b5fd}
-.cr{display:flex;justify-content:flex-end;margin-top:5px}
-.scenes{display:flex;flex-direction:column;gap:6px}
-.scene{display:flex;align-items:flex-start;gap:8px;background:var(--s2);border-radius:7px;padding:8px 10px}
-.snum{width:20px;height:20px;border-radius:4px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--muted2);flex-shrink:0}
-.sdesc{font-size:11px;line-height:1.55;color:var(--muted2);flex:1}.sdur{font-size:9px;color:var(--a2);font-weight:600;flex-shrink:0;margin-top:2px}
+.csc.trigger{border-left:3px solid var(--purple);background:rgba(139,92,246,.07);color:#c4b5fd}
+.cr{display:flex;justify-content:flex-end;margin-top:5px;gap:6px}
+/* SCENES */
+.scenes{display:flex;flex-direction:column;gap:5px}
+.scene{display:flex;align-items:flex-start;gap:8px;background:var(--s2);border-radius:7px;padding:8px 11px}
+.scn{width:22px;height:22px;border-radius:5px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--muted2);flex-shrink:0}
+.scsec{font-size:9px;color:var(--a2);font-weight:700;flex-shrink:0;min-width:35px}
+.scact{font-size:11px;color:var(--muted2);flex:1;line-height:1.5}
+/* EDIT TIMING */
+.timing-grid{display:flex;flex-direction:column;gap:4px}
+.timing-item{display:flex;align-items:center;gap:8px;background:var(--s2);border-radius:6px;padding:6px 10px}
+.t-sec{background:rgba(255,92,53,.15);color:var(--a1);border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;flex-shrink:0}
+.t-action{font-size:10px;color:var(--blue);font-weight:600;flex-shrink:0}
+.t-note{font-size:10px;color:var(--muted2)}
+/* EDIT RULES */
+.rules{display:flex;flex-direction:column;gap:5px}
+.rule{display:flex;gap:8px;font-size:11px;color:var(--muted2);background:var(--s2);border-radius:6px;padding:6px 10px;line-height:1.5}
+.rule-n{color:var(--a2);font-weight:700;flex-shrink:0}
+/* SUBTITLES */
 .subwords{display:flex;flex-wrap:wrap;gap:5px;padding:8px}
 .sw{background:var(--s3);border-radius:4px;padding:2px 7px;font-size:11px;color:var(--muted2)}
 .sw.hl{background:rgba(255,204,92,.15);color:var(--a3);font-weight:800;font-size:13px}
@@ -94,7 +111,7 @@ hr{border:none;border-top:1px solid var(--b);margin:13px 0}
 .sbox.info{background:var(--s2);border:1px solid var(--b2);color:var(--muted2)}
 .pickbox{background:var(--s2);border:1px solid var(--b2);border-radius:9px;padding:10px 11px;margin-bottom:9px}
 .pick-title{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
-.pick-item{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;cursor:pointer;transition:background .2s;font-size:11px;color:var(--muted2)}
+.pick-item{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;cursor:pointer;transition:background .2s;font-size:11px;color:var(--muted2)}
 .pick-item:hover{background:var(--s3)}.pick-item.sel{background:rgba(255,92,53,.1);color:var(--a1)}
 .pdot{width:6px;height:6px;border-radius:50%;background:var(--b2);flex-shrink:0}.pick-item.sel .pdot{background:var(--a1)}
 .rsl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:block}
@@ -102,26 +119,28 @@ hr{border:none;border-top:1px solid var(--b);margin:13px 0}
 .opt{background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:8px 6px;cursor:pointer;transition:all .2s;text-align:center}
 .opt:hover{border-color:rgba(255,92,53,.3)}.opt.sel{border-color:rgba(255,92,53,.5);background:rgba(255,92,53,.07)}
 .opt-i{font-size:16px;margin-bottom:2px}.opt-n{font-size:10px;font-weight:600}.opt.sel .opt-n{color:var(--a1)}.opt-d{font-size:9px;color:var(--muted)}
-.subs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:9px}
-.sub{background:var(--s2);border:1px solid var(--b2);border-radius:7px;padding:7px 4px;cursor:pointer;transition:all .2s;text-align:center}
-.sub:hover{border-color:rgba(255,92,53,.2)}.sub.sel{border-color:rgba(255,92,53,.5);background:rgba(255,92,53,.07)}
-.sub-p{font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;margin-bottom:3px;display:inline-block}
-.sub-n{font-size:9px;color:var(--muted)}.sub.sel .sub-n{color:var(--a2)}
-.trim-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px}
-.tl{font-size:9px;color:var(--muted);margin-bottom:3px}.trim-g input{margin:0}
+/* CHECKBOX */
+.chk-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:9px 11px}
+.chk-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--a1);flex-shrink:0}
+.chk-label{font-size:11px;color:var(--muted2);line-height:1.4}
+.chk-label strong{color:var(--text);display:block;font-size:12px}
 /* PROGRESS */
 .pbox{background:var(--s2);border:1px solid var(--b2);border-radius:9px;padding:11px;display:none;margin-bottom:9px}
 .pbox.show{display:block}
 .phead{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--muted2);margin-bottom:6px}
 .msp{width:11px;height:11px;border:2px solid var(--b2);border-top-color:var(--a1);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
-.pbar-wrap{height:6px;background:var(--b2);border-radius:3px;margin-bottom:6px;overflow:hidden}
-.pbar-fill{height:100%;background:linear-gradient(90deg,var(--a1),var(--a2));border-radius:3px;width:0%;transition:width .5s}
-.plog{max-height:100px;overflow-y:auto;font-size:10px;color:var(--muted);line-height:1.9;font-family:monospace}
-.plog .ok{color:var(--green)}.plog .er{color:#ff6b6b}.plog .in{color:var(--a3)}
+.pbar-w{height:5px;background:var(--b2);border-radius:3px;margin-bottom:6px;overflow:hidden}
+.pbar-f{height:100%;background:linear-gradient(90deg,var(--a1),var(--a2));border-radius:3px;width:0%;transition:width .5s}
+.plog{max-height:90px;overflow-y:auto;font-size:10px;color:var(--muted);line-height:1.9;font-family:monospace}
+.plog .ok{color:var(--green)}.plog .er{color:#ff6b6b}
 .rbox{background:var(--s2);border:1px solid rgba(45,220,138,.2);border-radius:9px;padding:11px;display:none;margin-bottom:9px}
-.rbox.show{display:block;animation:fadeup .3s ease}
-.rbox video{width:100%;border-radius:7px;background:#000;display:block;margin-bottom:9px;border:1px solid var(--b2)}
-canvas{display:none}#src-vid{display:none}
+.rbox.show{display:block;animation:fu .3s ease}
+/* ANGLE PREVIEW */
+.angle-prev{border-radius:9px;padding:10px 12px;margin-bottom:9px;display:none}
+.angle-prev.show{display:block}
+/* TRIM */
+.trim-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px}
+.tl{font-size:9px;color:var(--muted);margin-bottom:3px}.trim-g input{margin:0}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.col-l,.col-r{position:relative;height:auto;border:none;border-bottom:1px solid var(--b)}}
 </style>
 </head>
@@ -129,12 +148,13 @@ canvas{display:none}#src-vid{display:none}
 <nav>
   <div class="logo">Conteni<em>Q</em> Pro</div>
   <div class="nav-r">
-    <div class="badge badge-green" id="srv-status">⚪ Sunucu kontrol ediliyor…</div>
-    <div class="badge badge-orange">🇹🇷 Türkiye Pazarı</div>
+    <div class="badge bg" id="srv-badge">⚪ Kontrol ediliyor…</div>
+    <div class="badge bo">🇹🇷 Türkiye Pazarı</div>
   </div>
 </nav>
 
 <div class="layout">
+
 <!-- LEFT -->
 <div class="col col-l">
   <span class="sec">Sektör & Hedef</span>
@@ -155,7 +175,7 @@ canvas{display:none}#src-vid{display:none}
     <option>✨ Genel İşletme</option>
   </select>
   <label>Şehir</label>
-  <input type="text" id="city" placeholder="Antalya…">
+  <input type="text" id="city" placeholder="Antalya, İstanbul…">
   <label>Hedef</label>
   <div class="pills" id="goal-pills">
     <div class="pill on">🎯 Müşteri</div>
@@ -164,24 +184,21 @@ canvas{display:none}#src-vid{display:none}
     <div class="pill">📈 Takipçi</div>
   </div>
   <label>Hedef Kitle</label>
-  <input type="text" id="audience" placeholder="25-45 yaş…">
+  <input type="text" id="audience" placeholder="25-45 yaş, yatırımcılar…">
   <label>Ürün / Hizmet Detayı</label>
-  <textarea id="detail" placeholder="Farkını, güçlü yanını yaz…"></textarea>
+  <textarea id="detail" placeholder="Ne sattığını, rakipten farkını, güçlü yanlarını yaz…"></textarea>
   <hr>
   <span class="sec">API Ayarları</span>
   <label>Anthropic API Key</label>
   <input type="password" id="api-key" placeholder="sk-ant-api03-…">
   <div style="font-size:10px;color:var(--muted);margin-top:4px">
-    <a href="https://console.anthropic.com" target="_blank" style="color:var(--a2)">console.anthropic.com</a> → ücretsiz key al
+    <a href="https://console.anthropic.com" target="_blank" style="color:var(--a2)">console.anthropic.com</a> ücretsiz key al
   </div>
   <hr>
   <span class="sec">Video (Opsiyonel)</span>
   <div class="vprev" id="vprev">
     <video id="vel" controls></video>
-    <div class="vbar">
-      <span class="vname" id="vname">—</span>
-      <button class="vrm" id="vrm">× Kaldır</button>
-    </div>
+    <div class="vbar"><span class="vname" id="vname">—</span><button class="vrm" id="vrm">× Kaldır</button></div>
   </div>
   <div class="upzone" id="dropzone">
     <input type="file" accept="video/*" id="vfile">
@@ -198,27 +215,24 @@ canvas{display:none}#src-vid{display:none}
   <div class="empty" id="st-empty">
     <div class="empty-ico">🎬</div>
     <h2>Hazır, bekliyor</h2>
-    <p>Sektörünü seç, API key'ini gir, butona bas. Video yüklersen sunucu gerçek ffmpeg ile işler — Whisper altyazı ekler, 9:16 kırpar.</p>
+    <p>Sektörünü seç, hedefini belirt, detay yaz — ne kadar detay o kadar iyi içerik. Sonra butona bas.</p>
   </div>
   <div class="loading" id="st-load" style="display:none">
     <div class="spinner"></div>
     <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">İçerikler Üretiliyor…</div>
-    <div style="font-size:12px;color:var(--muted);margin-top:5px">Claude AI yazıyor…</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:5px">Sektörüne özel 7 Reels stratejisi hazırlanıyor</div>
     <div class="lsteps">
-      <div class="lstep" id="ls1">🏢 Sektör analiz ediliyor</div>
-      <div class="lstep" id="ls2">🎯 Hedef kitle belirleniyor</div>
-      <div class="lstep" id="ls3">🎣 Hook metinleri yazılıyor</div>
-      <div class="lstep" id="ls4">🎬 Video akışları planlanıyor</div>
-      <div class="lstep" id="ls5">✍️ Script ve captionlar yazılıyor</div>
-      <div class="lstep" id="ls6">📦 Paket derleniyor</div>
+      <div class="lstep" id="ls1">🏢 Sektör ve kitle analiz ediliyor</div>
+      <div class="lstep" id="ls2">🧠 7 farklı psikolojik tetikleyici belirleniyor</div>
+      <div class="lstep" id="ls3">🎣 Her angle için hook yazılıyor</div>
+      <div class="lstep" id="ls4">🎬 Sahne sahne video akışı planlanıyor</div>
+      <div class="lstep" id="ls5">✍️ Script ve altyazılar yazılıyor</div>
+      <div class="lstep" id="ls6">📦 Edit planları ve CapCut rehberi hazırlanıyor</div>
     </div>
   </div>
   <div id="st-res" style="display:none">
     <div class="res-head">
-      <div>
-        <div class="res-title">7 Reels İçeriği Hazır</div>
-        <div class="res-meta" id="res-meta">—</div>
-      </div>
+      <div><div class="res-title">7 Reels İçeriği Hazır</div><div class="res-meta" id="res-meta">—</div></div>
       <button class="gbtn" id="regen-btn">🔄 Tekrar Üret</button>
     </div>
     <div class="gbtns">
@@ -231,9 +245,9 @@ canvas{display:none}#src-vid{display:none}
   </div>
 </div>
 
-<!-- RIGHT: VIDEO EDITOR -->
+<!-- RIGHT -->
 <div class="col col-r">
-  <div class="r-title">🎬 Video Edit (Sunucu)</div>
+  <div class="r-title">🎬 Video İşleme</div>
   <div class="sbox warn" id="r-nocon">← Önce içerik üret</div>
   <div id="r-picker" style="display:none">
     <div class="pickbox">
@@ -241,8 +255,12 @@ canvas{display:none}#src-vid{display:none}
       <div id="pick-list"></div>
     </div>
   </div>
-  <div class="sbox info" id="r-novid" style="display:none">← Sol panelden video yükle</div>
-  <div class="sbox ok" id="r-vidok" style="display:none">✅ Video hazır — ffmpeg işleyecek</div>
+
+  <!-- Angle preview -->
+  <div class="angle-prev" id="angle-prev"></div>
+
+  <div class="sbox info" id="r-novid" style="display:none">← Sol panelden video yükle.<br>Yoksa sadece içerik + SRT indir.</div>
+  <div class="sbox ok" id="r-vidok" style="display:none">✅ Video yüklendi</div>
 
   <div id="r-settings" style="display:none">
     <span class="rsl">Format</span>
@@ -252,25 +270,20 @@ canvas{display:none}#src-vid{display:none}
       <div class="opt" data-v="16:9"><div class="opt-i">🖥️</div><div class="opt-n">16:9</div><div class="opt-d">YouTube</div></div>
       <div class="opt" data-v="orig"><div class="opt-i">🔲</div><div class="opt-n">Orijinal</div><div class="opt-d">Değiştirme</div></div>
     </div>
-    <span class="rsl">Altyazı Stili</span>
-    <div class="subs" id="sub-opts">
-      <div class="sub sel" data-v="viral"><div class="sub-p" style="background:#fff;color:#000">VIRAL</div><div class="sub-n">Bold</div></div>
-      <div class="sub" data-v="tiktok"><div class="sub-p" style="background:#ff0050;color:#fff;padding:1px 4px">TikTok</div><div class="sub-n">TikTok</div></div>
-      <div class="sub" data-v="yellow"><div class="sub-p" style="color:#ffcc5c;text-shadow:1px 1px 2px #000">Sarı</div><div class="sub-n">Sarı</div></div>
-      <div class="sub" data-v="minimal"><div class="sub-p" style="color:#fff;background:rgba(0,0,0,.6);padding:1px 4px">Min</div><div class="sub-n">Minimal</div></div>
-      <div class="sub" data-v="fire"><div class="sub-p" style="color:#ff5c35;text-shadow:0 0 6px #ff9a3c">ATEŞ</div><div class="sub-n">Ateş</div></div>
-      <div class="sub" data-v="none"><div class="sub-p" style="color:var(--muted)">Yok</div><div class="sub-n">Yok</div></div>
+
+    <div class="chk-row">
+      <input type="checkbox" id="use-whisper" checked>
+      <div class="chk-label"><strong>Whisper Altyazı</strong>Sesinizi analiz edip kelime kelime altyazı yazar</div>
     </div>
+    <div class="chk-row">
+      <input type="checkbox" id="use-silence-cut">
+      <div class="chk-label"><strong>Sessizlik Kesici</strong>Duraksamaları otomatik keser (fırsat/hata içerikleri için)</div>
+    </div>
+
     <span class="rsl">Kırpma (sn)</span>
     <div class="trim-g">
       <div><div class="tl">Başlangıç</div><input type="number" id="t0" value="0" min="0"></div>
       <div><div class="tl">Bitiş (0=tümü)</div><input type="number" id="t1" value="0" min="0"></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
-      <input type="checkbox" id="use-whisper" checked style="width:auto">
-      <label style="margin:0;font-size:11px;color:var(--muted2);text-transform:none;letter-spacing:0">
-        Whisper ile otomatik altyazı (Anthropic key ile)
-      </label>
     </div>
     <button class="btn-p" id="render-btn" style="margin-top:0;font-size:13px">🎬 Sunucuda İşle & İndir</button>
   </div>
@@ -279,9 +292,16 @@ canvas{display:none}#src-vid{display:none}
     <button class="btn-g" id="dl-pkg-only">📄 İçerik Paketi İndir (TXT)</button>
   </div>
 
+  <!-- Download buttons (after processing) -->
+  <div id="r-downloads" style="display:none;margin-top:9px">
+    <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">İndirilenler</div>
+    <button class="btn-blue" id="dl-srt-btn" style="width:100%;margin-bottom:6px;display:none">📝 SRT İndir (CapCut için)</button>
+    <button class="btn-blue" id="dl-plan-btn" style="width:100%;display:none">📋 Edit Planı İndir (JSON)</button>
+  </div>
+
   <div class="pbox" id="pbox">
     <div class="phead"><div class="msp"></div><span id="ptitle">İşleniyor…</span></div>
-    <div class="pbar-wrap"><div class="pbar-fill" id="pfill"></div></div>
+    <div class="pbar-w"><div class="pbar-f" id="pfill"></div></div>
     <div class="plog" id="plog"></div>
   </div>
 
@@ -290,265 +310,330 @@ canvas{display:none}#src-vid{display:none}
       <span style="font-size:20px">✅</span>
       <div>
         <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800">Video Hazır!</div>
-        <div style="font-size:10px;color:var(--muted)">ffmpeg + Whisper ile işlendi</div>
+        <div style="font-size:10px;color:var(--muted)" id="rbox-sub">—</div>
       </div>
     </div>
-    <button class="btn-green" id="dl-vid">⬇️ Video İndir (MP4)</button>
-    <button class="btn-g" id="dl-both" style="margin-top:0;font-size:11px">📦 Video + İçerik Paketi</button>
+    <button class="btn-p" id="dl-vid" style="font-size:13px;margin-top:0">⬇️ Video İndir (MP4)</button>
+    <button class="btn-g" id="dl-both" style="font-size:11px;margin-top:7px">📦 Video + TXT Paketi</button>
   </div>
 </div>
-</div>
+
+</div><!-- /layout -->
 
 <script>
 const S = {
-  vidFile: null, content: null, selIdx: 0,
-  fmt: "9:16", sub: "viral", jobId: null,
-  polling: null, generating: false
+  vidFile:null, content:null, selIdx:0,
+  fmt:"9:16", jobId:null, polling:null, generating:false
 };
+const $=id=>document.getElementById(id);
 
-const $ = id => document.getElementById(id);
+// Server check
+(async()=>{
+  try{
+    const r=await fetch("/api/health");
+    const d=await r.json();
+    const el=$("srv-badge");
+    if(d.ok&&d.ffmpeg){el.textContent="🟢 Sunucu hazır";el.className="badge bg";}
+    else{el.textContent="🟡 Kısmi";el.className="badge bo";}
+  }catch(e){$("srv-badge").textContent="🔴 Bağlanamadı";}
+})();
 
-// ── SERVER CHECK ──────────────────────────
-async function checkServer() {
-  try {
-    const r = await fetch("/api/health");
-    const d = await r.json();
-    const el = $("srv-status");
-    if (d.ok && d.ffmpeg) {
-      el.textContent = "🟢 Sunucu hazır (ffmpeg ✓)";
-      el.className = "badge badge-green";
-    } else if (d.ok) {
-      el.textContent = "🟡 Sunucu açık (ffmpeg yok)";
-      el.className = "badge badge-orange";
-    }
-  } catch(e) {
-    $("srv-status").textContent = "🔴 Sunucu bağlanamadı";
-  }
-}
-checkServer();
-
-// ── PILLS ────────────────────────────────
-document.querySelectorAll("#goal-pills .pill").forEach(p => {
-  p.addEventListener("click", () => {
-    document.querySelectorAll("#goal-pills .pill").forEach(x => x.classList.remove("on"));
+// Pills
+document.querySelectorAll("#goal-pills .pill").forEach(p=>{
+  p.addEventListener("click",()=>{
+    document.querySelectorAll("#goal-pills .pill").forEach(x=>x.classList.remove("on"));
     p.classList.add("on");
   });
 });
 
-// ── VIDEO UPLOAD ─────────────────────────
-$("vfile").addEventListener("change", function() {
-  const f = this.files[0]; if (!f) return;
-  S.vidFile = f;
-  $("vel").src = URL.createObjectURL(f);
+// Video
+$("vfile").addEventListener("change",function(){
+  const f=this.files[0];if(!f)return;
+  S.vidFile=f;
+  $("vel").src=URL.createObjectURL(f);
   $("vprev").classList.add("show");
-  $("dropzone").style.display = "none";
-  $("vname").textContent = f.name;
+  $("dropzone").style.display="none";
+  $("vname").textContent=f.name;
   updateRight();
 });
-$("vrm").addEventListener("click", () => {
-  S.vidFile = null;
-  $("vel").src = ""; $("vprev").classList.remove("show");
-  $("dropzone").style.display = "block"; $("vfile").value = "";
-  updateRight();
+$("vrm").addEventListener("click",()=>{
+  S.vidFile=null;$("vel").src="";$("vprev").classList.remove("show");
+  $("dropzone").style.display="block";$("vfile").value="";updateRight();
 });
-const dz = $("dropzone");
-dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
-dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
-dz.addEventListener("drop", e => {
-  e.preventDefault(); dz.classList.remove("drag");
-  const f = e.dataTransfer.files[0];
-  if (!f || !f.type.startsWith("video/")) return;
-  const dt = new DataTransfer(); dt.items.add(f);
-  $("vfile").files = dt.files; $("vfile").dispatchEvent(new Event("change"));
+const dz=$("dropzone");
+dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("drag");});
+dz.addEventListener("dragleave",()=>dz.classList.remove("drag"));
+dz.addEventListener("drop",e=>{
+  e.preventDefault();dz.classList.remove("drag");
+  const f=e.dataTransfer.files[0];
+  if(!f||!f.type.startsWith("video/"))return;
+  const dt=new DataTransfer();dt.items.add(f);
+  $("vfile").files=dt.files;$("vfile").dispatchEvent(new Event("change"));
 });
 
-// ── SELECTORS ────────────────────────────
-document.querySelectorAll("#fmt-opts .opt").forEach(el => {
-  el.addEventListener("click", () => {
-    document.querySelectorAll("#fmt-opts .opt").forEach(o => o.classList.remove("sel"));
-    el.classList.add("sel"); S.fmt = el.dataset.v;
-  });
-});
-document.querySelectorAll("#sub-opts .sub").forEach(el => {
-  el.addEventListener("click", () => {
-    document.querySelectorAll("#sub-opts .sub").forEach(o => o.classList.remove("sel"));
-    el.classList.add("sel"); S.sub = el.dataset.v;
+// Format
+document.querySelectorAll("#fmt-opts .opt").forEach(el=>{
+  el.addEventListener("click",()=>{
+    document.querySelectorAll("#fmt-opts .opt").forEach(o=>o.classList.remove("sel"));
+    el.classList.add("sel");S.fmt=el.dataset.v;
   });
 });
 
-// ── RIGHT PANEL ──────────────────────────
-function updateRight() {
-  const hC = !!S.content, hV = !!S.vidFile;
-  $("r-nocon").style.display = hC ? "none" : "block";
-  $("r-picker").style.display = hC ? "block" : "none";
-  $("r-novid").style.display = (hC && !hV) ? "block" : "none";
-  $("r-vidok").style.display = (hC && hV) ? "block" : "none";
-  $("r-settings").style.display = (hC && hV) ? "block" : "none";
-  $("r-only").style.display = (hC && !hV) ? "block" : "none";
+// Right panel
+function updateRight(){
+  const hC=!!S.content,hV=!!S.vidFile;
+  $("r-nocon").style.display=hC?"none":"block";
+  $("r-picker").style.display=hC?"block":"none";
+  $("r-novid").style.display=(hC&&!hV)?"block":"none";
+  $("r-vidok").style.display=(hC&&hV)?"block":"none";
+  $("r-settings").style.display=(hC&&hV)?"block":"none";
+  $("r-only").style.display=(hC&&!hV)?"block":"none";
   $("rbox").classList.remove("show");
 }
 
-function buildPicker(cs) {
-  $("pick-list").innerHTML = cs.map((c,i) =>
-    `<div class="pick-item ${i===0?"sel":""}" data-i="${i}">
+const ANGLE_META = {
+  "firsat":        {icon:"🔴",bg:"rgba(255,0,0,.08)",   color:"#ff5555",label:"Fırsat Kaçırma"},
+  "sir":           {icon:"🟣",bg:"rgba(180,80,255,.08)", color:"#b45fff",label:"Sır"},
+  "hata":          {icon:"⚠️",bg:"rgba(255,92,53,.08)",  color:"#ff5c35",label:"Yaygın Hata"},
+  "kanit":         {icon:"✅",bg:"rgba(45,220,138,.08)", color:"#2ddc8a",label:"Sosyal Kanıt"},
+  "karsilastirma": {icon:"⚡",bg:"rgba(79,138,255,.08)", color:"#4f8aff",label:"Karşılaştırma"},
+  "bilgi":         {icon:"💡",bg:"rgba(96,165,250,.08)", color:"#60a5fa",label:"Bilgi"},
+  "duygusal":      {icon:"❤️",bg:"rgba(236,72,153,.08)", color:"#ec4899",label:"Duygusal"},
+};
+
+function getAM(angle){
+  const a=(angle||"").toLowerCase();
+  for(const[k,v]of Object.entries(ANGLE_META))if(a.includes(k))return v;
+  return {icon:"📌",bg:"rgba(255,255,255,.05)",color:"var(--muted2)",label:angle};
+}
+
+function buildPicker(cs){
+  $("pick-list").innerHTML=cs.map((c,i)=>{
+    const am=getAM(c.angle);
+    return `<div class="pick-item ${i===0?"sel":""}" data-i="${i}">
       <div class="pdot"></div>
-      <div><strong>${c.num}.</strong> ${c.angle}</div>
-    </div>`
-  ).join("");
-  document.querySelectorAll(".pick-item").forEach(el => {
-    el.addEventListener("click", () => {
-      S.selIdx = +el.dataset.i;
-      document.querySelectorAll(".pick-item").forEach(p => p.classList.remove("sel"));
+      <span style="font-size:13px">${am.icon}</span>
+      <div><strong>${c.num}.</strong> ${am.label}</div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".pick-item").forEach(el=>{
+    el.addEventListener("click",()=>{
+      S.selIdx=+el.dataset.i;
+      document.querySelectorAll(".pick-item").forEach(p=>p.classList.remove("sel"));
       el.classList.add("sel");
+      showAnglePrev(S.selIdx);
     });
   });
+  showAnglePrev(0);
 }
 
-// ── GENERATE ─────────────────────────────
-$("gen-btn").addEventListener("click", generate);
-$("regen-btn").addEventListener("click", generate);
-$("reset-btn").addEventListener("click", resetAll);
+function showAnglePrev(idx){
+  if(!S.content)return;
+  const c=S.content.contents[idx];if(!c)return;
+  const am=getAM(c.angle);
+  const ap=$("angle-prev");
+  const rules=(c.edit_rules||[]).map((r,i)=>`<div style="font-size:10px;color:var(--muted2);padding:2px 0;line-height:1.5">${r}</div>`).join("");
+  const zoom=(c.zoom_plan||[]).map(z=>`<span style="background:rgba(79,138,255,.15);color:var(--blue);border-radius:4px;padding:1px 6px;font-size:9px;margin-right:4px">${z}</span>`).join("");
+  ap.className="angle-prev show";
+  ap.style.background=am.bg;
+  ap.style.border=`1px solid ${am.color}33`;
+  ap.innerHTML=`
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+      <span style="font-size:18px">${am.icon}</span>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:${am.color}">${am.label}</div>
+        <div style="font-size:9px;color:var(--muted)">${c.cut_notes||""}</div>
+      </div>
+    </div>
+    ${rules}
+    ${zoom?`<div style="margin-top:5px">${zoom}</div>`:""}
+  `;
+}
 
-async function generate() {
-  const sector = $("sector").value;
-  const apiKey = $("api-key").value.trim();
-  if (!sector) { flash("sector"); return; }
-  if (!apiKey) { flash("api-key"); return; }
-  if (S.generating) return;
-  S.generating = true;
+// GENERATE
+$("gen-btn").addEventListener("click",generate);
+$("regen-btn").addEventListener("click",generate);
+$("reset-btn").addEventListener("click",resetAll);
 
-  const city     = $("city").value || "Türkiye";
-  const goal     = document.querySelector("#goal-pills .pill.on")?.textContent?.trim() || "Müşteri";
-  const audience = $("audience").value || "genel";
-  const detail   = $("detail").value || "";
+async function generate(){
+  const sector=$("sector").value;
+  const apiKey=$("api-key").value.trim();
+  if(!sector){flash("sector");return;}
+  if(!apiKey){flash("api-key");return;}
+  if(S.generating)return;
+  S.generating=true;
 
-  $("gen-btn").disabled = true; $("gen-btn").textContent = "⏳ Üretiliyor…";
-  $("st-empty").style.display = "none";
-  $("st-load").style.display = "flex";
-  $("st-res").style.display = "none";
-  ["ls1","ls2","ls3","ls4","ls5","ls6"].forEach(id => document.getElementById(id).classList.remove("act","done"));
+  const city=$("city").value||"Türkiye";
+  const goal=document.querySelector("#goal-pills .pill.on")?.textContent?.trim()||"Müşteri";
+  const audience=$("audience").value||"genel";
+  const detail=$("detail").value||"";
 
-  const loadP = animSteps(["ls1","ls2","ls3","ls4","ls5","ls6"]);
+  $("gen-btn").disabled=true;$("gen-btn").textContent="⏳ Üretiliyor…";
+  $("st-empty").style.display="none";$("st-load").style.display="flex";$("st-res").style.display="none";
+  ["ls1","ls2","ls3","ls4","ls5","ls6"].forEach(id=>document.getElementById(id).classList.remove("act","done"));
 
+  const lp=animSteps(["ls1","ls2","ls3","ls4","ls5","ls6"]);
   let data;
-  try {
-    const r = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Api-Key": apiKey },
-      body: JSON.stringify({ sector, city, goal, audience, detail, hasVideo: !!S.vidFile })
+  try{
+    const r=await fetch("/api/generate",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-Api-Key":apiKey},
+      body:JSON.stringify({sector,city,goal,audience,detail})
     });
-    data = await r.json();
-    if (data.error) throw new Error(data.error);
-  } catch(e) {
+    data=await r.json();
+    if(data.error)throw new Error(data.error);
+  }catch(e){
     console.error(e);
-    data = buildFallback(sector, city, goal);
+    data=buildFallback(sector,city,goal);
   }
-
-  await loadP;
-  S.content = data;
+  await lp;
+  S.content=data;
   renderCards(data);
-  buildPicker(data.contents || []);
+  buildPicker(data.contents||[]);
   updateRight();
-  $("gen-btn").disabled = false; $("gen-btn").textContent = "✨ 7 İçerik Üret";
-  S.generating = false;
+  $("gen-btn").disabled=false;$("gen-btn").textContent="✨ 7 İçerik Üret";
+  S.generating=false;
 }
 
-function flash(id) {
-  const el = $(id);
-  el.style.borderColor = "rgba(255,92,53,.8)";
-  el.focus();
-  setTimeout(() => el.style.borderColor = "", 1500);
-}
+function flash(id){const el=$(id);el.style.borderColor="rgba(255,92,53,.8)";el.focus();setTimeout(()=>el.style.borderColor="",1500);}
 
-function animSteps(ids) {
-  let i = 0;
-  return new Promise(res => {
-    function tick() {
-      if (i > 0) document.getElementById(ids[i-1]).classList.replace("act","done");
-      if (i < ids.length) { document.getElementById(ids[i]).classList.add("act"); i++; setTimeout(tick, 500); }
+function animSteps(ids){
+  let i=0;
+  return new Promise(res=>{
+    function tick(){
+      if(i>0)document.getElementById(ids[i-1]).classList.replace("act","done");
+      if(i<ids.length){document.getElementById(ids[i]).classList.add("act");i++;setTimeout(tick,600);}
       else res();
-    }
-    tick();
+    }tick();
   });
 }
 
-// ── RENDER CARDS ─────────────────────────
-function renderCards(data) {
-  $("st-load").style.display = "none";
-  $("st-res").style.display = "block";
-  $("res-meta").textContent = `${data.meta?.sector||""} · ${data.meta?.city||""} · ${data.meta?.goal||""}`;
-  const c = $("cards"); c.innerHTML = "";
-  (data.contents || []).forEach((ct, i) => c.appendChild(makeCard(ct, i)));
+// RENDER CARDS
+function renderCards(data){
+  $("st-load").style.display="none";$("st-res").style.display="block";
+  $("res-meta").textContent=`${data.meta?.sector||""} · ${data.meta?.city||""} · ${data.meta?.goal||""}`;
+  const c=$("cards");c.innerHTML="";
+  (data.contents||[]).forEach((ct,i)=>c.appendChild(makeCard(ct,i)));
 }
 
-function makeCard(c, i) {
-  const card = document.createElement("div");
-  card.className = "card" + (i===0?" open":""); card.id = "card-"+i;
-  const subH = (c.subtitles||[]).map(s => {
-    const hl = (s.highlight||[]).map(h=>h.toLowerCase().replace(/\W/g,""));
+function makeCard(c,i){
+  const card=document.createElement("div");
+  card.className="card"+(i===0?" open":"");card.id="card-"+i;
+  const am=getAM(c.angle);
+
+  // Subtitles
+  const subH=(c.subtitles||[]).map(s=>{
+    const hl=(s.highlight||[]).map(h=>h.toLowerCase().replace(/\W/g,""));
     return `<div class="subwords">${s.text.split(" ").map(w=>{
       const cl=w.toLowerCase().replace(/\W/g,"");
-      return `<span class="sw ${hl.some(h=>cl===h||cl.includes(h))?"hl":""}">${w}</span>`;
+      return `<span class="sw ${hl.some(h=>cl===h)?"hl":""}">${w}</span>`;
     }).join("")}</div>`;
   }).join("");
-  const scH = (c.video_flow||[]).map(s =>
-    `<div class="scene"><div class="snum">${s.scene}</div><div class="sdesc">${s.desc}</div><div class="sdur">${s.duration}</div></div>`
-  ).join("");
-  const tagsH = (c.hashtags||[]).map(h=>`<span class="ht">${h}</span>`).join("");
 
-  card.innerHTML = `
+  // Scenes
+  const scH=(c.video_flow||[]).map(s=>
+    `<div class="scene">
+      <div class="scn">${s.scene||"?"}</div>
+      <div class="scsec">${s.sec||s.duration||""}</div>
+      <div class="scact"><strong>${s.action||""}</strong>${s.text?` — "${s.text}"`:""}${s.desc?` ${s.desc}`:""}</div>
+    </div>`
+  ).join("");
+
+  // Edit timing
+  const timH=(c.edit_timing||[]).map(t=>
+    `<div class="timing-item">
+      <div class="t-sec">${t.sec}sn</div>
+      <div class="t-action">${t.action?.replace("_"," ")||""}</div>
+      <div class="t-note">${t.note||""}</div>
+    </div>`
+  ).join("");
+
+  // Edit rules
+  const rulesH=(c.edit_rules||[]).map(r=>
+    `<div class="rule"><div class="rule-n">▸</div><div>${r}</div></div>`
+  ).join("");
+
+  const tagsH=(c.hashtags||[]).map(h=>`<span class="ht">${h}</span>`).join("");
+
+  card.innerHTML=`
     <div class="card-hd">
       <div class="cnum">${c.num||i+1}</div>
-      <div class="cinfo"><div class="cangle">${c.angle||"İçerik "+(i+1)}</div><div class="chook-p">"${c.hook||""}"</div></div>
-      <button class="btn-sm apply-btn" data-i="${i}" style="margin-right:8px;flex-shrink:0">🎬 Uygula</button>
-      <div class="cchev">▼</div>
+      <div class="cinfo">
+        <div class="cangle">
+          <span>${am.icon}</span> ${am.label}
+          <span class="abadge" style="background:${am.bg};color:${am.color}">${c.angle||""}</span>
+        </div>
+        <div class="chook-p">"${c.hook||""}"</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="btn-sm apply-btn" data-i="${i}">🎬 Uygula</button>
+        <div class="cchev">▼</div>
+      </div>
     </div>
     <div class="card-body">
-      <div class="cs"><div class="csl">⚡ HOOK</div><div class="csc hook">${c.hook||"—"}</div><div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.hook||"")}">Kopyala</button></div></div>
-      <div class="cs"><div class="csl">🎬 VİDEO AKIŞI</div><div class="scenes">${scH}</div></div>
-      <div class="cs"><div class="csl">🎙️ SCRIPT</div><div class="csc script">${c.script||"—"}</div><div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.script||"")}">Kopyala</button></div></div>
-      <div class="cs"><div class="csl">📝 ALTYAZI</div><div class="csc" style="padding:6px">${subH||"—"}</div></div>
-      <div class="cs"><div class="csl">🔥 TETİKLEYİCİ</div><div class="csc trig">${c.trigger||"—"}</div></div>
-      <div class="cs"><div class="csl">🎯 CTA</div><div class="csc cta">${c.cta||"—"}</div><div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.cta||"")}">Kopyala</button></div></div>
-      <div class="cs"><div class="csl">💬 CAPTION</div><div class="csc">${c.caption||"—"}</div><div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.caption||"")}">Kopyala</button></div></div>
-      <div class="cs"><div class="csl"># HASHTAG</div><div class="csc" style="background:none;padding:0"><div class="htags">${tagsH}</div></div><div class="cr"><button class="btn-sm cp-btn" data-t="${ea((c.hashtags||[]).join(" "))}">Kopyala</button></div></div>
+      <div class="cs">
+        <div class="csl">⚡ HOOK — İlk ${c.hook_dur||3}sn</div>
+        <div class="csc hook">${c.hook||"—"}</div>
+        ${c.hook_visual?`<div style="font-size:10px;color:var(--muted);margin-top:5px;padding:0 2px">📷 ${c.hook_visual}</div>`:""}
+        <div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.hook||"")}">Kopyala</button></div>
+      </div>
+      <div class="cs">
+        <div class="csl">🎬 VİDEO AKIŞI — Sahne Sahne</div>
+        <div class="scenes">${scH||"—"}</div>
+      </div>
+      ${timH?`<div class="cs"><div class="csl">⏱️ EDİT ZAMANLAMA</div><div class="timing-grid">${timH}</div></div>`:""}
+      ${rulesH?`<div class="cs"><div class="csl">🎛️ EDİT KURALLARI</div><div class="rules">${rulesH}</div></div>`:""}
+      <div class="cs">
+        <div class="csl">🎙️ SCRIPT — Kameraya Bak</div>
+        <div class="csc script">${c.script||"—"}</div>
+        <div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.script||"")}">Kopyala</button></div>
+      </div>
+      <div class="cs">
+        <div class="csl">📝 ALTYAZI</div>
+        <div class="csc" style="padding:6px">${subH||"—"}</div>
+      </div>
+      <div class="cs">
+        <div class="csl">🔥 PSİKOLOJİK TETİKLEYİCİ</div>
+        <div class="csc trigger">${c.trigger||"—"}</div>
+      </div>
+      <div class="cs">
+        <div class="csl">🎯 CTA</div>
+        <div class="csc cta">${c.cta||"—"}</div>
+        <div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.cta||"")}">Kopyala</button></div>
+      </div>
+      <div class="cs">
+        <div class="csl">💬 CAPTION</div>
+        <div class="csc">${c.caption||"—"}</div>
+        <div class="cr"><button class="btn-sm cp-btn" data-t="${ea(c.caption||"")}">Kopyala</button></div>
+      </div>
+      <div class="cs">
+        <div class="csl"># HASHTAG</div>
+        <div class="csc" style="background:none;padding:0"><div class="htags">${tagsH}</div></div>
+        <div class="cr"><button class="btn-sm cp-btn" data-t="${ea((c.hashtags||[]).join(" "))}">Kopyala</button></div>
+      </div>
     </div>`;
 
-  card.querySelector(".card-hd").addEventListener("click", e => {
-    if (e.target.closest(".apply-btn")) return;
+  card.querySelector(".card-hd").addEventListener("click",e=>{
+    if(e.target.closest(".apply-btn"))return;
     card.classList.toggle("open");
   });
-  card.querySelector(".apply-btn").addEventListener("click", e => {
+  card.querySelector(".apply-btn").addEventListener("click",e=>{
     e.stopPropagation();
-    S.selIdx = +e.currentTarget.dataset.i;
+    S.selIdx=+e.currentTarget.dataset.i;
     document.querySelectorAll(".pick-item").forEach((p,j)=>p.classList.toggle("sel",j===S.selIdx));
+    showAnglePrev(S.selIdx);
     document.querySelector(".col-r").scrollIntoView({behavior:"smooth"});
   });
-  card.querySelectorAll(".cp-btn").forEach(btn => {
-    btn.addEventListener("click", e => {
+  card.querySelectorAll(".cp-btn").forEach(btn=>{
+    btn.addEventListener("click",e=>{
       e.stopPropagation();
       navigator.clipboard.writeText(btn.dataset.t.replace(/&quot;/g,'"')).then(()=>{
-        btn.textContent="✓ OK"; btn.classList.add("ok");
+        btn.textContent="✓ OK";btn.classList.add("ok");
         setTimeout(()=>{btn.textContent="Kopyala";btn.classList.remove("ok");},2000);
       });
     });
   });
   return card;
-}
-
-function getAngleBadge(angle) {
-  const map = {
-    "firsat":        {bg:"rgba(255,0,0,.15)",    color:"#ff4444", icon:"🔴 FIRSAT"},
-    "sir":           {bg:"rgba(139,92,246,.15)", color:"#a78bfa", icon:"🟣 SIR"},
-    "hata":          {bg:"rgba(255,92,53,.15)",  color:"#ff5c35", icon:"⚠️ HATA"},
-    "kanit":         {bg:"rgba(45,220,138,.15)", color:"#2ddc8a", icon:"✅ KANIT"},
-    "karsilastirma": {bg:"rgba(79,138,255,.15)", color:"#4f8aff", icon:"⚡ KARSI"},
-    "bilgi":         {bg:"rgba(96,165,250,.15)", color:"#60a5fa", icon:"💡 BİLGİ"},
-    "duygusal":      {bg:"rgba(236,72,153,.15)", color:"#ec4899", icon:"❤️ DUYGU"},
-  };
-  const a = (angle||"").toLowerCase();
-  for(const [k,v] of Object.entries(map)) if(a.includes(k)) return v;
-  return {bg:"rgba(255,255,255,.1)",color:"var(--muted2)",icon:"📌"};
 }
 
 function ea(s){return s.replace(/"/g,"&quot;").replace(/\n/g," ");}
@@ -559,10 +644,11 @@ $("copy-all").addEventListener("click",()=>{
   if(!S.content)return;
   const lines=[];
   (S.content.contents||[]).forEach(c=>{
-    lines.push("","═".repeat(50),`İÇERİK ${c.num}: ${c.angle}`,"═".repeat(50),"");
-    lines.push("⚡ HOOK:",c.hook,"","🎬 VİDEO AKIŞI:");
-    (c.video_flow||[]).forEach(s=>lines.push(`  Sahne ${s.scene} (${s.duration}): ${s.desc}`));
-    lines.push("","🎙️ SCRIPT:",c.script,"","🔥 TETİKLEYİCİ:",c.trigger,"","🎯 CTA:",c.cta,"","💬 CAPTION:",c.caption,"","# HASHTAG:",(c.hashtags||[]).join(" "));
+    lines.push("","═".repeat(50),`İÇERİK ${c.num}: ${c.angle} — ${c.hook}`,"═".repeat(50),"");
+    lines.push("HOOK:",c.hook,"");
+    if(c.video_flow?.length){lines.push("VİDEO AKIŞI:");c.video_flow.forEach(s=>lines.push(`  S${s.scene} (${s.sec||s.duration}): ${s.action||s.desc} ${s.text?'— "'+s.text+'"':""}`));lines.push("");}
+    if(c.edit_timing?.length){lines.push("EDİT ZAMANLAMA:");c.edit_timing.forEach(t=>lines.push(`  ${t.sec}sn: ${t.action} — ${t.note}`));lines.push("");}
+    lines.push("SCRIPT:",c.script,"","TETİKLEYİCİ:",c.trigger,"","CTA:",c.cta,"","CAPTION:",c.caption,"","HASHTAG:",(c.hashtags||[]).join(" "));
   });
   navigator.clipboard.writeText(lines.join("\n")).then(()=>{
     $("copy-all").textContent="✓ Kopyalandı!";
@@ -575,13 +661,17 @@ $("dl-pkg-only").addEventListener("click",()=>dlPkg(S.selIdx));
 function dlAllTxt(){
   if(!S.content)return;
   const m=S.content.meta||{};
-  const lines=["CONTENIQ PRO","=".repeat(50),"",`${m.sector||""} | ${m.city||""} | ${m.goal||""}`,""];
+  const lines=["CONTENIQ PRO — FULL IÇERIK PAKETİ","=".repeat(50),"",`${m.sector||""} | ${m.city||""} | ${m.goal||""}`,""];
   (S.content.contents||[]).forEach(c=>{
-    lines.push("═".repeat(50),`İÇERİK ${c.num}: ${c.angle}`,"═".repeat(50),"");
-    lines.push("⚡ HOOK:",c.hook,"","🎬 VİDEO AKIŞI:");
-    (c.video_flow||[]).forEach(s=>lines.push(`  Sahne ${s.scene} (${s.duration}): ${s.desc}`));
-    lines.push("","🎙️ SCRIPT:",c.script,"","🔥 TETİKLEYİCİ:",c.trigger,"","🎯 CTA:",c.cta,"","💬 CAPTION:",c.caption,"","# HASHTAG:",(c.hashtags||[]).join(" "),"");
+    lines.push("═".repeat(50),`İÇERİK ${c.num}: ${c.angle?.toUpperCase()} — ${c.hook}`,"═".repeat(50),"");
+    lines.push("HOOK:",c.hook,"");
+    if(c.hook_visual)lines.push("HOOK GÖRSELİ:",c.hook_visual,"");
+    if(c.video_flow?.length){lines.push("VİDEO AKIŞI:");c.video_flow.forEach(s=>lines.push(`  Sahne ${s.scene} (${s.sec||s.duration}): ${s.action||s.desc}${s.text?' — "'+s.text+'"':""}`));lines.push("");}
+    if(c.edit_timing?.length){lines.push("EDİT ZAMANLAMA:");c.edit_timing.forEach(t=>lines.push(`  ${t.sec}sn: ${t.action} — ${t.note}`));lines.push("");}
+    if(c.edit_rules?.length){lines.push("EDİT KURALLARI:");c.edit_rules.forEach(r=>lines.push("  • "+r));lines.push("");}
+    lines.push("SCRIPT:",c.script,"","TETİKLEYİCİ:",c.trigger,"","CTA:",c.cta,"","CAPTION:",c.caption,"","HASHTAG:",(c.hashtags||[]).join(" "),"");
   });
+  lines.push(`Oluşturuldu: ${new Date().toLocaleString("tr-TR")}`,"ConteniQ Pro");
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/plain;charset=utf-8"}));
   a.download=`conteniq-${m.sector||"icerik"}.txt`;a.click();
@@ -589,105 +679,92 @@ function dlAllTxt(){
 
 function dlPkg(idx){
   if(!S.content)return;
-  const c=S.content.contents[idx],m=S.content.meta||{};
-  const lines=["CONTENIQ PRO","=".repeat(40),"",`${m.sector}|${m.city}|${m.goal}`,`İçerik ${c.num}: ${c.angle}`,"","⚡ HOOK:",c.hook,"","🎬 VİDEO AKIŞI:"];
-  (c.video_flow||[]).forEach(s=>lines.push(`  Sahne ${s.scene} (${s.duration}): ${s.desc}`));
-  lines.push("","🎙️ SCRIPT:",c.script,"","🔥 TETİKLEYİCİ:",c.trigger,"","🎯 CTA:",c.cta,"","💬 CAPTION:",c.caption,"","# HASHTAG:",(c.hashtags||[]).join(" "));
+  const c=S.content.contents[idx];const m=S.content.meta||{};
+  const lines=["CONTENIQ PRO — İÇERİK PAKETİ","=".repeat(40),"",`${m.sector} | ${m.city} | ${m.goal}`,`İçerik ${c.num}: ${c.angle}`,""];
+  lines.push("HOOK:",c.hook,"");
+  if(c.hook_visual)lines.push("HOOK GÖRSELİ:",c.hook_visual,"");
+  if(c.video_flow?.length){lines.push("VİDEO AKIŞI:");c.video_flow.forEach(s=>lines.push(`  Sahne ${s.scene} (${s.sec||s.duration}): ${s.action||s.desc}${s.text?' — "'+s.text+'"':""}`));lines.push("");}
+  if(c.edit_timing?.length){lines.push("EDİT ZAMANLAMA:");c.edit_timing.forEach(t=>lines.push(`  ${t.sec}sn: ${t.action} — ${t.note}`));lines.push("");}
+  lines.push("SCRIPT:",c.script,"","TETİKLEYİCİ:",c.trigger,"","CTA:",c.cta,"","CAPTION:",c.caption,"","HASHTAG:",(c.hashtags||[]).join(" "));
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/plain;charset=utf-8"}));
   a.download="conteniq-paket.txt";a.click();
 }
 
-// ── VIDEO RENDER (SUNUCU) ─────────────────
-$("render-btn").addEventListener("click", renderVideo);
+// RENDER
+$("render-btn").addEventListener("click",renderVideo);
+$("dl-vid").addEventListener("click",()=>{if(S.jobId)window.location.href=`/api/download/${S.jobId}`;});
+$("dl-both").addEventListener("click",()=>{if(S.jobId)window.location.href=`/api/download/${S.jobId}`;setTimeout(()=>dlPkg(S.selIdx),300);});
+$("dl-srt-btn").addEventListener("click",()=>{if(S.jobId)window.location.href=`/api/srt/${S.jobId}`;});
+$("dl-plan-btn").addEventListener("click",()=>{if(S.jobId)window.location.href=`/api/editplan/${S.jobId}`;});
 
-async function renderVideo() {
-  if (!S.vidFile || !S.content) return;
-  const content = S.content.contents[S.selIdx];
-  if (!content) return;
-  const apiKey = $("api-key").value.trim();
+async function renderVideo(){
+  if(!S.vidFile||!S.content)return;
+  const content=S.content.contents[S.selIdx];
+  if(!content)return;
+  const apiKey=$("api-key").value.trim();
 
-  $("pbox").classList.add("show");
-  $("rbox").classList.remove("show");
-  $("plog").innerHTML = "";
-  S.jobId = null;
+  $("pbox").classList.add("show");$("rbox").classList.remove("show");
+  $("r-downloads").style.display="none";
+  $("plog").innerHTML="";S.jobId=null;
 
-  addLog("📤 Video sunucuya yükleniyor…");
-  setP(5, "Yükleniyor…");
+  addLog("📤 Video sunucuya yükleniyor…");setP(5,"Yükleniyor…");
 
-  const fd = new FormData();
-  fd.append("video", S.vidFile);
-  fd.append("hook", content.hook || "");
-  fd.append("format", S.fmt);
-  fd.append("sub_style", S.sub);
-  fd.append("cta", content.cta || "");
-  fd.append("subtitles", JSON.stringify(content.subtitles || []));
-  fd.append("content", JSON.stringify(content));
-  fd.append("content", JSON.stringify(content)); // tam içerik AI edit plan için
-  fd.append("trim_start", $("t0").value || "0");
-  fd.append("trim_end", $("t1").value || "0");
-  fd.append("use_whisper", $("use-whisper").checked ? "true" : "false");
+  const fd=new FormData();
+  fd.append("video",S.vidFile);
+  fd.append("content",JSON.stringify(content));
+  fd.append("format",S.fmt);
+  fd.append("trim_start",$("t0").value||"0");
+  fd.append("trim_end",$("t1").value||"0");
+  fd.append("use_whisper",$("use-whisper").checked?"true":"false");
+  fd.append("silence_cut",$("use-silence-cut").checked?"true":"false");
 
-  try {
-    const r = await fetch("/api/process", {
-      method: "POST",
-      headers: { "X-Api-Key": apiKey },
-      body: fd
+  try{
+    const r=await fetch("/api/process",{
+      method:"POST",
+      headers:{"X-Api-Key":apiKey},
+      body:fd
     });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    S.jobId = d.job_id;
-    addLog(`✅ Job başladı: ${S.jobId}`, "ok");
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    S.jobId=d.job_id;
+    addLog(`✅ Job: ${S.jobId}`,"ok");
     pollJob(S.jobId);
-  } catch(e) {
-    addLog("❌ " + e.message, "er");
-    setP(0, "Hata");
+  }catch(e){
+    addLog("❌ "+e.message,"er");setP(0,"Hata");
   }
 }
 
-function pollJob(jobId) {
-  if (S.polling) clearInterval(S.polling);
-  S.polling = setInterval(async () => {
-    try {
-      const r = await fetch(`/api/status/${jobId}`);
-      const d = await r.json();
-      setP(d.progress || 0, d.msg || "…");
-      addLog(d.msg || "…");
-
-      if (d.status === "done") {
+function pollJob(jid){
+  if(S.polling)clearInterval(S.polling);
+  S.polling=setInterval(async()=>{
+    try{
+      const r=await fetch(`/api/status/${jid}`);
+      const d=await r.json();
+      setP(d.progress||0,d.msg||"…");
+      if(d.progress>30&&d.progress<100)addLog(d.msg||"…");
+      if(d.status==="done"){
         clearInterval(S.polling);
-        $("rbox").classList.add("show");
-        $("pbox").classList.remove("show");
-        S.jobId = jobId;
-        addLog("🎉 Video hazır!", "ok");
-      } else if (d.status === "error") {
-        clearInterval(S.polling);
-        addLog("❌ " + d.msg, "er");
+        $("rbox").classList.add("show");$("pbox").classList.remove("show");
+        addLog("🎉 Video hazır!","ok");
+        // Debug'dan SRT/plan kontrolü
+        fetch(`/api/debug/${jid}`).then(r=>r.json()).then(debug=>{
+          $("rbox-sub").textContent=`${debug.output_size_mb}MB${debug.has_srt?" · SRT hazır":""}${debug.has_edit_plan?" · Edit planı hazır":""}`;
+          $("r-downloads").style.display="block";
+          if(debug.has_srt){$("dl-srt-btn").style.display="block";}
+          if(debug.has_edit_plan){$("dl-plan-btn").style.display="block";}
+        });
+      }else if(d.status==="error"){
+        clearInterval(S.polling);addLog("❌ "+d.msg,"er");
       }
-    } catch(e) {
-      addLog("Polling hata: " + e.message, "er");
-    }
-  }, 2000);
+    }catch(e){addLog("Poll hata","er");}
+  },2000);
 }
 
-$("dl-vid").addEventListener("click", () => {
-  if (!S.jobId) return;
-  window.location.href = `/api/download/${S.jobId}`;
-});
-$("dl-both").addEventListener("click", () => {
-  if (S.jobId) window.location.href = `/api/download/${S.jobId}`;
-  setTimeout(() => dlPkg(S.selIdx), 500);
-});
-
-function setP(pct,title){
-  $("pfill").style.width=pct+"%";
-  if(title) $("ptitle").textContent=title;
-}
+function setP(p,t){$("pfill").style.width=p+"%";if(t)$("ptitle").textContent=t;}
 function addLog(msg,cls=""){
-  const el=$("plog");
-  const d=document.createElement("div");
-  if(cls)d.className=cls;d.textContent=msg;
-  el.appendChild(d);el.scrollTop=el.scrollHeight;
+  const el=$("plog");const d=document.createElement("div");
+  if(cls)d.className=cls;d.textContent=msg;el.appendChild(d);el.scrollTop=el.scrollHeight;
 }
 
 function resetAll(){
@@ -698,21 +775,21 @@ function resetAll(){
   $("sector").value="";$("city").value="";$("audience").value="";$("detail").value="";
   $("st-empty").style.display="flex";$("st-load").style.display="none";$("st-res").style.display="none";
   $("pbox").classList.remove("show");$("rbox").classList.remove("show");
+  $("r-downloads").style.display="none";$("angle-prev").classList.remove("show");
   updateRight();
 }
 
 function buildFallback(sector,city,goal){
-  const a=["Fırsat Kaçırma","Sır","Yaygın Hata","Sosyal Kanıt","Karşılaştırma","Bilgi","Duygusal"];
-  const h=[`Bu ${sector} fırsatını KAÇIRMA`,`${sector}'de kimsenin bilmediği SIR`,`${sector}'de herkesin yaptığı HATA`,"Müşterilerim nasıl BAŞARDI?","Rakiplerimden FARKIMIZ bu",`${city}'de 3 GERÇEK`,"Bunu bilmeden DEVAM ETME"];
-  return{meta:{sector,city,goal},contents:a.map((angle,i)=>({
-    num:i+1,angle,hook:h[i],
-    video_flow:[{scene:1,desc:"Hook açılış",duration:"0-3sn"},{scene:2,desc:"Problem",duration:"3-8sn"},{scene:3,desc:"Değer",duration:"8-15sn"},{scene:4,desc:"Kanıt",duration:"15-22sn"},{scene:5,desc:"CTA",duration:"22-27sn"}],
-    script:`${h[i]}. ${city}'de ${sector} alanında yıllardır çalışıyorum. Kimsenin söylemediği bir şey anlatacağım. Hemen DM atın.`,
-    subtitles:[{text:h[i],highlight:h[i].split(" ").filter(w=>w===w.toUpperCase()&&w.length>2)},{text:"Hemen DM at — DETAYLAR sende",highlight:["DM","DETAYLAR"]}],
-    trigger:"Bu içeriği görüp harekete geçmeyen fırsatı kaçırıyor.",
-    cta:"DM yaz → hemen dönüyorum",
-    caption:`${city}'de ${sector} hakkında bilmen gereken her şey. 📩 DM atın!`,
-    hashtags:[`#${sector.toLowerCase().replace(/[\s\/🏡🍽💄⚖📚🏥🏋🛒💻👗✈✨]+/g,"")}`,`#${city.toLowerCase()}`,"#reels","#sosyalmedya","#içerik"]
+  const a=[["firsat","Fırsat Kaçırma"],["sir","Sır"],["hata","Yaygın Hata"],["kanit","Sosyal Kanıt"],["karsilastirma","Karşılaştırma"],["bilgi","Bilgi"],["duygusal","Duygusal"]];
+  return{meta:{sector,city,goal},contents:a.map(([angle,label],i)=>({
+    num:i+1,angle,hook:`${sector} için ${label} hook`,
+    video_flow:[{scene:1,sec:"0-3",action:"Hook",text:"Hook söyle"},{scene:2,sec:"3-8",action:"Problem",text:"Problem anlat"},{scene:3,sec:"8-15",action:"Çözüm",text:"Çözüm sun"},{scene:4,sec:"15-22",action:"Kanıt",text:"Kanıt göster"},{scene:5,sec:"22-27",action:"CTA",text:"CTA söyle"}],
+    edit_timing:[{sec:2,action:"zoom_in",note:"Hook vurgusu"},{sec:8,action:"zoom_out",note:"Geçiş"},{sec:15,action:"zoom_in",note:"Kanıt anı"}],
+    script:`${city}'de ${sector} alanında çalışıyorum. Bu içeriği izlediğin için teşekkürler. DM yaz hemen.`,
+    subtitles:[{text:"Güçlü mesaj",highlight:["GÜÇLÜ"]},{text:"İkinci mesaj",highlight:["İKİNCİ"]}],
+    trigger:"İzleyicide merak uyandırır",cta:"DM yaz simdi",
+    caption:`${city}'de ${sector} hakkında bilmeniz gereken her şey.`,
+    hashtags:[`#${sector.toLowerCase().replace(/\s|\//g,"")}`,`#${city.toLowerCase()}`,"#reels","#sosyalmedya","#içerik"]
   }))};
 }
 </script>
