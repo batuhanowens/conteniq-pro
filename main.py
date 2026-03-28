@@ -217,11 +217,11 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subs_json, t
         vf_parts = []
 
         if fmt == "9:16":
-            vf_parts.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920")
+            vf_parts.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=720:1280")
         elif fmt == "1:1":
-            vf_parts.append("crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=1080:1080")
+            vf_parts.append("crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=720:720")
         elif fmt == "16:9":
-            vf_parts.append("scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black")
+            vf_parts.append("scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black")
 
         if ass_path and os.path.exists(ass_path):
             # ass filtresi virgül içerdiği için ayrı ekle
@@ -235,8 +235,16 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subs_json, t
             cmd += ["-t", str(t1 - t0)]
         if vf_parts:
             cmd += ["-vf", ",".join(vf_parts)]
-        cmd += ["-c:v","libx264","-preset","fast","-crf","20",
-                "-c:a","aac","-b:a","128k","-movflags","+faststart", out_p]
+        cmd += [
+            "-c:v","libx264",
+            "-preset","ultrafast",  # en az RAM kullanır
+            "-crf","26",            # biraz daha düşük kalite ama hafif
+            "-threads","1",         # tek thread — RAM tasarrufu
+            "-c:a","aac",
+            "-b:a","96k",
+            "-movflags","+faststart",
+            out_p
+        ]
 
         print(f"[{jid}] CMD: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -257,8 +265,9 @@ def run_job(jid, inp, api_key, hook_text, fmt, sub_style, cta_text, subs_json, t
             if t1 > 0 and t1 > t0: cmd2 += ["-t",str(t1-t0)]
             vf2 = [p for p in vf_parts if not p.startswith("ass=")]
             if vf2: cmd2 += ["-vf",",".join(vf2)]
-            cmd2 += ["-c:v","libx264","-preset","fast","-crf","20",
-                     "-c:a","aac","-b:a","128k","-movflags","+faststart",out_p]
+            cmd2 += ["-c:v","libx264","-preset","ultrafast","-crf","26",
+                     "-threads","1","-c:a","aac","-b:a","96k",
+                     "-movflags","+faststart",out_p]
             print(f"[{jid}] CMD2: {' '.join(cmd2)}")
             r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600)
             print(f"[{jid}] CMD2 returncode: {r2.returncode}")
