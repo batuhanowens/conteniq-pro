@@ -536,6 +536,21 @@ function makeCard(c, i) {
   return card;
 }
 
+function getAngleBadge(angle) {
+  const map = {
+    "firsat":        {bg:"rgba(255,0,0,.15)",    color:"#ff4444", icon:"🔴 FIRSAT"},
+    "sir":           {bg:"rgba(139,92,246,.15)", color:"#a78bfa", icon:"🟣 SIR"},
+    "hata":          {bg:"rgba(255,92,53,.15)",  color:"#ff5c35", icon:"⚠️ HATA"},
+    "kanit":         {bg:"rgba(45,220,138,.15)", color:"#2ddc8a", icon:"✅ KANIT"},
+    "karsilastirma": {bg:"rgba(79,138,255,.15)", color:"#4f8aff", icon:"⚡ KARSI"},
+    "bilgi":         {bg:"rgba(96,165,250,.15)", color:"#60a5fa", icon:"💡 BİLGİ"},
+    "duygusal":      {bg:"rgba(236,72,153,.15)", color:"#ec4899", icon:"❤️ DUYGU"},
+  };
+  const a = (angle||"").toLowerCase();
+  for(const [k,v] of Object.entries(map)) if(a.includes(k)) return v;
+  return {bg:"rgba(255,255,255,.1)",color:"var(--muted2)",icon:"📌"};
+}
+
 function ea(s){return s.replace(/"/g,"&quot;").replace(/\n/g," ");}
 
 $("exp-all").addEventListener("click",()=>document.querySelectorAll(".card").forEach(c=>c.classList.add("open")));
@@ -607,6 +622,7 @@ async function renderVideo() {
   fd.append("sub_style", S.sub);
   fd.append("cta", content.cta || "");
   fd.append("subtitles", JSON.stringify(content.subtitles || []));
+  fd.append("content", JSON.stringify(content));
   fd.append("content", JSON.stringify(content)); // tam içerik AI edit plan için
   fd.append("trim_start", $("t0").value || "0");
   fd.append("trim_end", $("t1").value || "0");
