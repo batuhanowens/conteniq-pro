@@ -1,4 +1,4 @@
-import os, uuid, json, subprocess, threading, re
+import os, uuid, json, subprocess, threading, re, math
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
@@ -46,164 +46,112 @@ def ts(sec):
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
 # ════════════════════════════════════════════════════
-# İÇERİK TİPİ = EDİT MOTORU
-# Her angle farklı bir video karakteri üretir
+# EDİT MOTOR PROFİLLERİ
+# Her angle = farklı edit davranışı
 # ════════════════════════════════════════════════════
 
 ANGLE_PROFILES = {
     "firsat": {
         "label": "Fırsat Kaçırma",
-        # Renk: kırmızı+sarı — aciliyet
-        "hook_color":   "&H000000FF",   # kırmızı (ASS BGR)
-        "hi_primary":   "&H0055CCFF",   # sarı
-        "hi_secondary": "&H000080FF",   # turuncu
-        "outline":      "&H00000000",
-        "shadow":       "&HCC000000",
-        "font_scale":   115,
-        "sub_size_ratio": 0.068,
-        "hook_size_ratio": 0.088,
-        # Zamanlama: agresif, hızlı
-        "hook_dur":     2.5,           # hook kısa ve güçlü
-        "sub_words":    3,             # az kelime, hızlı okunur
-        "sub_gap":      0.1,           # kelimeler arası boşluk az
-        # Zoom effect ffmpeg
-        "zoom_filter":  "zoompan=z='if(lte(zoom,1.0),1.04,max(1.001,zoom-0.002))':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=720x1280:fps=30",
-        "use_zoom":     False,         # RAM sorunu için kapalı
-        # AI prompt karakteri
-        "prompt_tone":  "ACİL ve SERT. Acele ettir. 'Son fırsat', 'kaçırma', 'şimdi' kelimelerini kullan. Hook maksimum 8 kelime.",
-        "cta_style":    "urgent",      # 'Hemen DM at' gibi
+        "hook_color": "&H000000FF", "hi1": "&H0055CCFF", "hi2": "&H000080FF",
+        "outline": "&H00000000", "shadow": "&HCC000000",
+        "font_scale": 115, "sub_size": 0.068, "hook_size": 0.090,
+        "hook_dur": 2.5,
+        # Edit davranışı
+        "cut_interval": 1.5,      # her 1.5 sn cut
+        "silence_cut": True,       # sessizlikleri kes
+        "zoom_factor": 1.06,       # %6 zoom
+        "zoom_interval": 3.0,      # her 3sn bir zoom
+        "sub_words": 3,            # hızlı okunur
+        "rhythm": "fast",          # baş hızlı, son hızlı
+        "prompt_tone": "ACİL. 'SON', 'KAÇIRMA', 'HEMEN' kelimelerini kullan. Max 8 kelime hook.",
+        "cta": "Hemen DM at — gecikme",
     },
     "sir": {
-        "label": "Sır / İçeriden Bilgi",
-        "hook_color":   "&H00FF00FF",   # mor/purple
-        "hi_primary":   "&H00FF00FF",
-        "hi_secondary": "&H0055CCFF",
-        "outline":      "&H00000000",
-        "shadow":       "&H88000000",
-        "font_scale":   100,
-        "sub_size_ratio": 0.058,
-        "hook_size_ratio": 0.078,
-        "hook_dur":     3.5,
-        "sub_words":    5,
-        "sub_gap":      0.15,
-        "use_zoom":     False,
-        "prompt_tone":  "GİZEMLİ ve merak uyandırıcı. 'Kimse bilmiyor', 'gizli', 'içeriden' kelimelerini kullan. Yavaş ve emin bir ton.",
-        "cta_style":    "curious",
+        "label": "Sır",
+        "hook_color": "&H00FF00FF", "hi1": "&H00FF00FF", "hi2": "&H0055CCFF",
+        "outline": "&H00000000", "shadow": "&H88000000",
+        "font_scale": 100, "sub_size": 0.058, "hook_size": 0.078,
+        "hook_dur": 3.5,
+        "cut_interval": 2.5, "silence_cut": False,
+        "zoom_factor": 1.03, "zoom_interval": 5.0,
+        "sub_words": 5, "rhythm": "slow_start",
+        "prompt_tone": "GİZEMLİ. 'Kimse bilmiyor', 'gizli', 'ilk kez paylaşıyorum' kullan.",
+        "cta": "DM yaz — anlatayin",
     },
     "hata": {
         "label": "Yaygın Hata",
-        "hook_color":   "&H000000FF",   # kırmızı
-        "hi_primary":   "&H0055CCFF",   # sarı (YANLIŞ kelimesi)
-        "hi_secondary": "&H0000FF00",   # yeşil (DOGRU kelimesi)
-        "outline":      "&H00000000",
-        "shadow":       "&HCC000000",
-        "font_scale":   108,
-        "sub_size_ratio": 0.062,
-        "hook_size_ratio": 0.082,
-        "hook_dur":     3.0,
-        "sub_words":    4,
-        "sub_gap":      0.12,
-        "use_zoom":     False,
-        "prompt_tone":  "UYARICI ve net. 'Hata', 'yanlış', 'dikkat' kelimelerini kullan. İzleyicide 'ben de mi yapıyorum?' hissi yarat.",
-        "cta_style":    "help",
+        "hook_color": "&H000000FF", "hi1": "&H0055CCFF", "hi2": "&H0000FF00",
+        "outline": "&H00000000", "shadow": "&HCC000000",
+        "font_scale": 108, "sub_size": 0.062, "hook_size": 0.084,
+        "hook_dur": 3.0,
+        "cut_interval": 2.0, "silence_cut": True,
+        "zoom_factor": 1.05, "zoom_interval": 3.5,
+        "sub_words": 4, "rhythm": "medium",
+        "prompt_tone": "UYARICI. 'Hata', 'yanlış', 'dikkat et' kullan. YANLIŞ=sarı, DOĞRU=yeşil.",
+        "cta": "DM at — dogru yolu goster",
     },
     "kanit": {
         "label": "Sosyal Kanıt",
-        "hook_color":   "&H0000FF00",   # yeşil — güven
-        "hi_primary":   "&H0000FF00",
-        "hi_secondary": "&H0055CCFF",
-        "outline":      "&H00000000",
-        "shadow":       "&H88000000",
-        "font_scale":   105,
-        "sub_size_ratio": 0.060,
-        "hook_size_ratio": 0.080,
-        "hook_dur":     3.0,
-        "sub_words":    5,
-        "sub_gap":      0.15,
-        "use_zoom":     False,
-        "prompt_tone":  "GÜVENİLİR ve samimi. Gerçek müşteri hikayesi, rakam, sonuç. 'Müşterim', 'kanıtlandı', 'gerçek sonuç' kullan.",
-        "cta_style":    "trust",
+        "hook_color": "&H0000FF00", "hi1": "&H0000FF00", "hi2": "&H0055CCFF",
+        "outline": "&H00000000", "shadow": "&H88000000",
+        "font_scale": 105, "sub_size": 0.060, "hook_size": 0.080,
+        "hook_dur": 3.0,
+        "cut_interval": 2.5, "silence_cut": False,
+        "zoom_factor": 1.03, "zoom_interval": 4.0,
+        "sub_words": 5, "rhythm": "steady",
+        "prompt_tone": "GÜVENİLİR. Rakam, müşteri, sonuç. 'Kanıtlandı', 'gerçek' kullan.",
+        "cta": "DM at — senin icin bakalim",
     },
     "karsilastirma": {
         "label": "Karşılaştırma",
-        "hook_color":   "&H00FFFFFF",
-        "hi_primary":   "&H0000FF00",   # yeşil = iyi
-        "hi_secondary": "&H000000FF",   # kırmızı = kötü
-        "outline":      "&H00000000",
-        "shadow":       "&HAA000000",
-        "font_scale":   108,
-        "sub_size_ratio": 0.060,
-        "hook_size_ratio": 0.080,
-        "hook_dur":     3.0,
-        "sub_words":    4,
-        "sub_gap":      0.12,
-        "use_zoom":     False,
-        "prompt_tone":  "KONTRAST ve net. 'VS', 'fark', 'hangisi daha iyi'. İki seçenek sun, birini öner.",
-        "cta_style":    "choice",
+        "hook_color": "&H00FFFFFF", "hi1": "&H0000FF00", "hi2": "&H000000FF",
+        "outline": "&H00000000", "shadow": "&HAA000000",
+        "font_scale": 108, "sub_size": 0.060, "hook_size": 0.082,
+        "hook_dur": 3.0,
+        "cut_interval": 2.0, "silence_cut": True,
+        "zoom_factor": 1.04, "zoom_interval": 3.5,
+        "sub_words": 4, "rhythm": "medium",
+        "prompt_tone": "KONTRAST. 'VS', 'karşılaştır', iki seçenek. Yeşil=iyi, Kırmızı=kötü.",
+        "cta": "DM at — en iyisini sec",
     },
     "bilgi": {
-        "label": "Bilgi / Eğitim",
-        "hook_color":   "&H00FFFFFF",
-        "hi_primary":   "&H005CCCFF",   # açık mavi
-        "hi_secondary": "&H0055CCFF",
-        "outline":      "&H00000000",
-        "shadow":       "&H88000000",
-        "font_scale":   100,
-        "sub_size_ratio": 0.056,
-        "hook_size_ratio": 0.076,
-        "hook_dur":     3.5,
-        "sub_words":    6,
-        "sub_gap":      0.18,
-        "use_zoom":     False,
-        "prompt_tone":  "BİLGİLENDİRİCİ ve güvenilir. Rakam, adım, liste formatı kullan. Sade ve net.",
-        "cta_style":    "learn",
+        "label": "Bilgi",
+        "hook_color": "&H00FFFFFF", "hi1": "&H005CCCFF", "hi2": "&H0055CCFF",
+        "outline": "&H00000000", "shadow": "&H88000000",
+        "font_scale": 100, "sub_size": 0.056, "hook_size": 0.076,
+        "hook_dur": 3.5,
+        "cut_interval": 3.0, "silence_cut": False,
+        "zoom_factor": 1.02, "zoom_interval": 6.0,
+        "sub_words": 6, "rhythm": "steady",
+        "prompt_tone": "BİLGİLENDİRİCİ. Adım, rakam, liste. Sade ve net.",
+        "cta": "Takip et — her gun paylasiyorum",
     },
     "duygusal": {
-        "label": "Duygusal Bağ",
-        "hook_color":   "&H00FF8080",   # açık pembe
-        "hi_primary":   "&H00FF8080",
-        "hi_secondary": "&H0055CCFF",
-        "outline":      "&H00000000",
-        "shadow":       "&H88000000",
-        "font_scale":   100,
-        "sub_size_ratio": 0.056,
-        "hook_size_ratio": 0.076,
-        "hook_dur":     4.0,           # yavaş, etki bırakır
-        "sub_words":    5,
-        "sub_gap":      0.20,          # kelimeler arası nefes var
-        "use_zoom":     False,
-        "prompt_tone":  "DUYGUSAL ve samimi. Kişisel hikaye, empati, 'ben de yaşadım' hissi. Yavaş ve derin.",
-        "cta_style":    "connect",
+        "label": "Duygusal",
+        "hook_color": "&H00FF8080", "hi1": "&H00FF8080", "hi2": "&H0055CCFF",
+        "outline": "&H00000000", "shadow": "&H88000000",
+        "font_scale": 100, "sub_size": 0.056, "hook_size": 0.076,
+        "hook_dur": 4.0,
+        "cut_interval": 3.5, "silence_cut": False,
+        "zoom_factor": 1.02, "zoom_interval": 7.0,
+        "sub_words": 5, "rhythm": "slow",
+        "prompt_tone": "DUYGUSAL. Kişisel hikaye, empati. Yavaş ve derin ton.",
+        "cta": "DM yaz — seninle konusalim",
     },
 }
 
-CTA_STYLES = {
-    "urgent":  "Hemen DM at — gecikme",
-    "curious": "DM yaz — sana anlatayin",
-    "help":    "DM at — dogru yolu goster",
-    "trust":   "DM at — senin icin bakalim",
-    "choice":  "DM at — en iyisini sec",
-    "learn":   "Takip et — her gun paylasiyorum",
-    "connect": "DM yaz — seninle konusalim",
-}
-
-def get_angle_profile(angle_str):
+def get_profile(angle_str):
     a = (angle_str or "").lower()
     for key in ANGLE_PROFILES:
         if key in a: return ANGLE_PROFILES[key]
-    # fuzzy match
-    mapping = {
-        "firsat":"firsat","kaçırma":"firsat","urgency":"firsat",
-        "sır":"sir","gizli":"sir","secret":"sir",
-        "hata":"hata","yanlis":"hata","error":"hata",
-        "kanit":"kanit","sosyal":"kanit","proof":"kanit",
-        "karsi":"karsilastirma","vs":"karsilastirma",
-        "bilgi":"bilgi","egitim":"bilgi","info":"bilgi",
-        "duygu":"duygusal","emotion":"duygusal",
-    }
-    for k, v in mapping.items():
+    mapping = {"kaçırma":"firsat","firsat":"firsat","sır":"sir","gizli":"sir",
+               "hata":"hata","yanlış":"hata","kanıt":"kanit","sosyal":"kanit",
+               "karşı":"karsilastirma","karsi":"karsilastirma","bilgi":"bilgi",
+               "duygu":"duygusal","duygusal":"duygusal"}
+    for k,v in mapping.items():
         if k in a: return ANGLE_PROFILES[v]
-    return ANGLE_PROFILES.get("bilgi")  # default: sakin
+    return ANGLE_PROFILES["bilgi"]
 
 # ── ROUTES ──────────────────────────────────────────
 
@@ -216,8 +164,7 @@ def health():
         r = subprocess.run(["ffmpeg","-version"], capture_output=True, timeout=5)
         ffok = r.returncode == 0
     except: ffok = False
-    return jsonify({"ok":True,"ffmpeg":ffok,"font":FONT_PATH,
-                    "angles": list(ANGLE_PROFILES.keys())})
+    return jsonify({"ok":True,"ffmpeg":ffok,"font":FONT_PATH})
 
 @app.route("/api/generate", methods=["POST"])
 def generate():
@@ -226,18 +173,14 @@ def generate():
     api_key = request.headers.get("X-Api-Key","")
     if not api_key: return jsonify({"error":"API key gerekli"}), 400
 
-    sector   = data.get("sector","Genel")
-    city     = data.get("city","Türkiye")
-    goal     = data.get("goal","Müşteri")
-    audience = data.get("audience","genel")
-    detail   = data.get("detail","")
+    sector=data.get("sector","Genel"); city=data.get("city","Türkiye")
+    goal=data.get("goal","Müşteri"); audience=data.get("audience","genel")
+    detail=data.get("detail","")
 
-    # Her angle için ayrı prompt tonu
-    angle_instructions = ""
-    for key, p in ANGLE_PROFILES.items():
-        angle_instructions += f"\n- {p['label']}: {p['prompt_tone']}"
+    angle_descs = "\n".join(f"- {v['label']} (angle={k}): {v['prompt_tone']}" 
+                             for k,v in ANGLE_PROFILES.items())
 
-    prompt = f"""Sen Türkiye pazarında uzman sosyal medya stratejisti ve Reels içerik uzmanısın.
+    prompt = f"""Sen Türkiye pazarında uzman sosyal medya stratejisti ve video edit uzmanısın.
 
 Bilgiler:
 - Sektör: {sector}
@@ -246,20 +189,18 @@ Bilgiler:
 - Hedef Kitle: {audience}
 {f"- Detay: {detail}" if detail else ""}
 
-7 farklı Reels içeriği üret. Her içerik farklı bir psikolojik tetikleyici kullanmalı.
-İçerik tipleri ve tonları:{angle_instructions}
+7 farklı Reels içeriği üret. Her içerik farklı bir psikolojik tetikleyici ve edit stili:
+{angle_descs}
 
 KURALLAR:
-1. Hook ve CTA metinlerinde KESİNLİKLE EMOJI KULLANMA
-2. Her içerik kendi tonuna SADIK olsun — fırsat acil, sır gizemli, duygusal samimi
-3. highlight listesi: o angle'a uygun vurgu kelimeleri (max 3)
-4. cta: o angle'ın CTA stiline uygun
+1. Hook/CTA'da KESİNLİKLE EMOJI YOK
+2. Her içerik kendi tonuna sadık olsun
+3. highlight: o angle için en güçlü 2-3 kelime
+4. angle değeri tam olarak şunlardan biri: firsat, sir, hata, kanit, karsilastirma, bilgi, duygusal
 
 SADECE JSON:
-{{"meta":{{"sector":"{sector}","city":"{city}","goal":"{goal}"}},"contents":[{{"num":1,"angle":"firsat","hook":"max 10 kelime hook","video_flow":[{{"scene":1,"desc":"Hook","duration":"0-3sn"}},{{"scene":2,"desc":"Problem","duration":"3-8sn"}},{{"scene":3,"desc":"Deger","duration":"8-15sn"}},{{"scene":4,"desc":"Kanit","duration":"15-22sn"}},{{"scene":5,"desc":"CTA","duration":"22-27sn"}}],"script":"max 100 kelime","subtitles":[{{"text":"altyazi 1","highlight":["VURGU1","VURGU2"]}},{{"text":"altyazi 2","highlight":["VURGU3"]}}],"trigger":"mesaj","cta":"tek aksiyon","caption":"2-3 cumle","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"]}}]}}
-
-angle degerleri: firsat, sir, hata, kanit, karsilastirma, bilgi, duygusal
-7 icerik uret, her biri farkli angle. Sektore ozel, Turkce."""
+{{"meta":{{"sector":"{sector}","city":"{city}","goal":"{goal}"}},"contents":[{{"num":1,"angle":"firsat","hook":"max 10 kelime","video_flow":[{{"scene":1,"desc":"Hook","duration":"0-3sn"}},{{"scene":2,"desc":"Problem","duration":"3-8sn"}},{{"scene":3,"desc":"Deger","duration":"8-15sn"}},{{"scene":4,"desc":"Kanit","duration":"15-22sn"}},{{"scene":5,"desc":"CTA","duration":"22-27sn"}}],"script":"max 100 kelime","subtitles":[{{"text":"altyazi 1","highlight":["KELIME1","KELIME2"]}},{{"text":"altyazi 2","highlight":["KELIME3"]}}],"trigger":"mesaj","cta":"tek aksiyon","caption":"2-3 cumle","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"]}}]}}
+7 icerik uret. Sektore ozel, Turkce."""
 
     try:
         r = req.post(
@@ -273,11 +214,11 @@ angle degerleri: firsat, sir, hata, kanit, karsilastirma, bilgi, duygusal
         if "error" in d: return jsonify({"error":d["error"]["message"]}), 400
         raw = re.sub(r"```json|```","","".join(x["text"] for x in d["content"] if x.get("type")=="text")).strip()
         result = json.loads(raw)
-        # Her içeriğe CTA stilini ekle
+        # CTA yoksa angle'dan al
         for c in result.get("contents",[]):
-            ap = get_angle_profile(c.get("angle",""))
-            if not c.get("cta") or c["cta"] == "tek aksiyon":
-                c["cta"] = CTA_STYLES.get(ap.get("cta_style","help"),"DM yaz")
+            p = get_profile(c.get("angle",""))
+            if not c.get("cta") or "aksiyon" in c.get("cta",""):
+                c["cta"] = p["cta"]
         return jsonify(result)
     except Exception as e:
         return jsonify({"error":str(e)}), 500
@@ -312,10 +253,15 @@ def upd(jid, p, msg, status="running"):
     JOBS[jid] = {"status":status,"progress":p,"msg":msg}
     print(f"[{jid}] {p}% {msg}")
 
+# ════════════════════════════════════════════════════
+# CORE: EDİT KARAR MOTORU
+# ════════════════════════════════════════════════════
+
 def run_job(jid, inp, api_key, content, fmt, t0, t1, use_wh):
     try:
         import requests as req
 
+        # 1. PROBE
         upd(jid, 5, "Video analiz ediliyor...")
         probe = subprocess.run(
             ["ffprobe","-v","quiet","-print_format","json","-show_streams","-show_format",inp],
@@ -325,27 +271,36 @@ def run_job(jid, inp, api_key, content, fmt, t0, t1, use_wh):
         duration = float(info["format"]["duration"])
         vs = next((s for s in info["streams"] if s["codec_type"]=="video"),{})
         vw=int(vs.get("width",1920)); vh=int(vs.get("height",1080))
-        upd(jid, 10, f"Video: {vw}x{vh}, {duration:.1f}s")
+        has_audio = any(s["codec_type"]=="audio" for s in info["streams"])
+        upd(jid, 10, f"Video: {vw}x{vh}, {duration:.1f}s, ses={'var' if has_audio else 'yok'}")
 
         end_t = t1 if (t1 > t0 and t1 > 0) else duration
         total_dur = end_t - t0
 
-        # Angle profilini al — bu video'nun karakterini belirler
+        # Angle profili — bu her şeyi belirler
         angle = content.get("angle","bilgi")
-        profile = get_angle_profile(angle)
-        upd(jid, 12, f"Angle: {profile['label']} | Stil: {profile['prompt_tone'][:40]}...")
+        profile = get_profile(angle)
+        upd(jid, 12, f"Edit profili: {profile['label']} | ritim={profile['rhythm']}")
 
-        # Whisper
+        # 2. SILENCE DETECTION — sessiz kısımları tespit et
+        silence_cuts = []
+        if profile["silence_cut"] and has_audio and total_dur > 10:
+            upd(jid, 14, "Sessizlikler tespit ediliyor...")
+            silence_cuts = detect_silence(inp, t0, end_t, jid)
+            upd(jid, 18, f"{len(silence_cuts)} sessiz bölge bulundu")
+
+        # 3. WHISPER
         whisper_words = []
-        if use_wh and api_key:
-            upd(jid, 15, "Whisper: ses analiz ediliyor...")
+        highlight_times = []  # [(start, end, word)] — zoom yapılacak anlar
+        if use_wh and api_key and has_audio:
+            upd(jid, 20, "Whisper: ses analiz ediliyor...")
             try:
                 aud = inp.replace("_in","_aud") + ".mp3"
                 subprocess.run(
                     ["ffmpeg","-y","-i",inp,"-vn","-ar","16000","-ac","1","-b:a","64k",aud],
                     capture_output=True, check=True, timeout=120
                 )
-                upd(jid, 22, "Whisper: transkript aliniyor...")
+                upd(jid, 27, "Whisper: transkript aliniyor...")
                 with open(aud,"rb") as f:
                     wr = req.post(
                         "https://api.openai.com/v1/audio/transcriptions",
@@ -361,70 +316,81 @@ def run_job(jid, inp, api_key, content, fmt, t0, t1, use_wh):
                 if wr.status_code == 200:
                     wd = wr.json()
                     whisper_words = wd.get("words",[])
-                    upd(jid, 32, f"Whisper: {len(whisper_words)} kelime OK")
-                    # AI vurgu seçimi — angle'a göre farklı kelimeler seçer
+                    upd(jid, 34, f"Whisper: {len(whisper_words)} kelime OK")
+                    # AI: angle'a göre vurgu ve zoom noktaları
                     if whisper_words:
-                        whisper_words = ai_highlights(whisper_words, content, profile, api_key, req)
+                        whisper_words, highlight_times = ai_edit_decisions(
+                            whisper_words, content, profile, api_key, req, jid)
                 else:
-                    upd(jid, 32, f"Whisper hata {wr.status_code}")
+                    upd(jid, 34, f"Whisper hata {wr.status_code}")
             except Exception as e:
-                upd(jid, 32, f"Whisper basarisiz: {e}")
+                upd(jid, 34, f"Whisper basarisiz: {e}")
 
-        # ASS — angle profiline göre tamamen farklı görünüm
-        upd(jid, 36, f"Altyazilar hazirlaniyor ({profile['label']})...")
+        # 4. ASS — angle profiline göre farklı görünüm
+        upd(jid, 36, f"Altyazilar olusturuluyor ({profile['label']})...")
         hook_text = clean(content.get("hook",""))
-        cta_text  = clean(content.get("cta",""))
+        cta_text  = clean(content.get("cta","") or profile["cta"])
         subs      = content.get("subtitles",[])
 
         ass_path = build_ass(jid, inp, whisper_words, subs,
                              hook_text, cta_text, fmt, total_dur, t0, profile)
 
-        # ffmpeg
+        # 5. FFMPEG — edit kararlarını uygula
         upd(jid, 45, "ffmpeg ile video isleniyor...")
         out_p = str(OUTPUT / f"{jid}_out.mp4")
 
-        vf_parts = []
-        if fmt == "9:16":
-            vf_parts.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=720:1280")
-        elif fmt == "1:1":
-            vf_parts.append("crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=720:720")
-        elif fmt == "16:9":
-            vf_parts.append("scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black")
-
-        if ass_path and os.path.exists(ass_path):
-            vf_parts.append(f"ass={ass_path}")
+        # Video filter zinciri — angle'a göre farklı
+        vf_chain = build_vf_chain(fmt, profile, highlight_times, silence_cuts,
+                                   total_dur, t0, ass_path)
 
         cmd = ["ffmpeg","-y"]
         if t0 > 0: cmd += ["-ss", str(t0)]
         cmd += ["-i", inp]
         if t1 > 0 and t1 > t0: cmd += ["-t", str(t1-t0)]
-        if vf_parts: cmd += ["-vf", ",".join(vf_parts)]
+        if vf_chain: cmd += ["-vf", vf_chain]
         cmd += ["-c:v","libx264","-preset","ultrafast","-crf","26",
                 "-threads","1","-c:a","aac","-b:a","96k",
                 "-movflags","+faststart", out_p]
 
-        print(f"[{jid}] CMD: {' '.join(cmd)}")
+        print(f"[{jid}] CMD: {' '.join(cmd[:8])}... vf={vf_chain[:80] if vf_chain else 'none'}...")
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         print(f"[{jid}] returncode: {result.returncode}")
 
         if result.returncode != 0:
-            # Fallback
-            upd(jid, 70, "ASS hatali — altyazisiz deneniyor...")
+            err_lines = [l for l in result.stderr.splitlines()
+                        if any(x in l for x in ["Error","error","Invalid","failed","ass"])]
+            print(f"[{jid}] STDERR: {chr(10).join(err_lines[-5:])}")
+            # Fallback — sadece crop + altyazı, zoom yok
+            upd(jid, 70, "Zoom filtresi hatali — basit versiyon deneniyor...")
+            simple_vf = build_simple_vf(fmt, ass_path)
             cmd2 = ["ffmpeg","-y"]
             if t0 > 0: cmd2 += ["-ss", str(t0)]
             cmd2 += ["-i", inp]
             if t1 > 0 and t1 > t0: cmd2 += ["-t", str(t1-t0)]
-            vf2 = [p for p in vf_parts if not p.startswith("ass=")]
-            if vf2: cmd2 += ["-vf", ",".join(vf2)]
+            if simple_vf: cmd2 += ["-vf", simple_vf]
             cmd2 += ["-c:v","libx264","-preset","ultrafast","-crf","26",
                      "-threads","1","-c:a","aac","-b:a","96k",
                      "-movflags","+faststart", out_p]
             r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600)
             if r2.returncode != 0:
-                raise Exception(f"ffmpeg basarisiz rc={r2.returncode}")
-            upd(jid, 90, "Altyazisiz versiyon tamamlandi")
+                # Son çare — sadece crop
+                cmd3 = ["ffmpeg","-y"]
+                if t0 > 0: cmd3 += ["-ss", str(t0)]
+                cmd3 += ["-i", inp]
+                if t1 > 0 and t1 > t0: cmd3 += ["-t", str(t1-t0)]
+                crop = get_crop_filter(fmt)
+                if crop: cmd3 += ["-vf", crop]
+                cmd3 += ["-c:v","libx264","-preset","ultrafast","-crf","26",
+                         "-threads","1","-c:a","aac","-b:a","96k",
+                         "-movflags","+faststart", out_p]
+                r3 = subprocess.run(cmd3, capture_output=True, text=True, timeout=600)
+                if r3.returncode != 0:
+                    raise Exception(f"Tüm denemeler basarisiz rc={r3.returncode}")
+                upd(jid, 90, "Sadece format donusumu yapildi")
+            else:
+                upd(jid, 90, "Altyazili versiyon tamamlandi")
         else:
-            upd(jid, 90, f"{profile['label']} stili uygulandı")
+            upd(jid, 90, f"{profile['label']} edit tamamlandi")
 
         size_mb = os.path.getsize(out_p)/1024/1024
         upd(jid, 100, f"Tamamlandi! {size_mb:.1f}MB", "done")
@@ -438,48 +404,213 @@ def run_job(jid, inp, api_key, content, fmt, t0, t1, use_wh):
         upd(jid, 0, f"Hata: {str(e)[:400]}", "error")
         print(f"[{jid}] EXCEPTION: {e}")
 
-def ai_highlights(words, content, profile, api_key, req):
-    """Angle'a göre farklı kelimeler vurgular.
-    Fırsat: aciliyet kelimeleri | Sır: gizemli kelimeler | Hata: yanlış/doğru"""
+# ════════════════════════════════════════════════════
+# SİLENCE DETECTION
+# ════════════════════════════════════════════════════
+
+def detect_silence(inp, t0, end_t, jid):
+    """ffmpeg silencedetect ile sessiz kısımları bul."""
+    try:
+        result = subprocess.run([
+            "ffmpeg","-i",inp,
+            "-af","silencedetect=noise=-35dB:d=0.4",
+            "-f","null","-"
+        ], capture_output=True, text=True, timeout=60)
+
+        silence_periods = []
+        starts = re.findall(r"silence_start: ([\d.]+)", result.stderr)
+        ends   = re.findall(r"silence_end: ([\d.]+)", result.stderr)
+
+        for s, e in zip(starts, ends):
+            s_t = float(s) - t0
+            e_t = float(e) - t0
+            dur = e_t - s_t
+            # Kısa sessizlikler (0.4-1.5sn) = kesme noktası
+            if 0.3 <= dur <= 1.5 and s_t > 3 and e_t < (end_t - t0 - 3):
+                silence_periods.append({"start": s_t, "end": e_t, "dur": dur})
+
+        print(f"[{jid}] Silence: {len(silence_periods)} adet")
+        return silence_periods
+    except Exception as e:
+        print(f"silence detect error: {e}")
+        return []
+
+# ════════════════════════════════════════════════════
+# AI EDİT KARARLARI
+# ════════════════════════════════════════════════════
+
+def ai_edit_decisions(words, content, profile, api_key, req, jid):
+    """
+    Claude'dan edit planı al:
+    - Hangi kelimeler vurgulanacak (angle'a göre)
+    - Hangi anlarda zoom yapılacak
+    """
     try:
         full_text = " ".join(w["word"] for w in words)
-        angle_label = profile.get("label","")
-        prompt_tone = profile.get("prompt_tone","")
         hook = clean(content.get("hook",""))
 
-        prompt = f"""Video transkripti: "{full_text[:400]}"
+        prompt = f"""Sen bir video edit uzmanısın. Bu videoyu analiz et ve edit kararları ver.
+
+İçerik tipi: {profile['label']}
+Ton: {profile['prompt_tone']}
 Hook: "{hook}"
-İçerik tipi: {angle_label}
-Bu tip için ton: {prompt_tone}
+Transkript: "{full_text[:400]}"
+Video süresi tahmini: {len(words)/2.5:.0f} saniye
 
-Bu içerik tipine göre hangi kelimeler vurgulanmalı?
-- Fırsat için: SON, KAÇIRMA, ŞİMDİ, HEMEN gibi aciliyet kelimeleri
-- Sır için: GİZLİ, KIMSE, BİLMİYOR gibi merak kelimeleri  
-- Hata için: YANLIŞ, HATA, DİKKAT kelimeleri
-- Kanıt için: MÜŞTERI, SONUÇ, GERÇEK, RAKAM kelimeleri
+GÖREV 1 — Vurgu kelimeleri:
+Bu angle için en etkili 3-5 kelime seç.
+- {profile['label']} için güçlü kelimeler neler?
 
-SADECE JSON: {{"highlights": ["kelime1","kelime2","kelime3"]}}"""
+GÖREV 2 — Zoom anları:
+Transkriptte en güçlü/vurucu 2-3 an hangisi? (saniye cinsinden tahmin et)
+Bu anlarda zoom yapılacak.
+
+SADECE JSON:
+{{
+  "highlights": ["kelime1","kelime2","kelime3"],
+  "zoom_moments": [
+    {{"time": 4.5, "word": "kelime", "intensity": 1.06}},
+    {{"time": 8.2, "word": "kelime", "intensity": 1.04}}
+  ],
+  "edit_notes": "kisa aciklama"
+}}"""
 
         r = req.post(
             "https://api.anthropic.com/v1/messages",
             headers={"Content-Type":"application/json","x-api-key":api_key,"anthropic-version":"2023-06-01"},
-            json={"model":"claude-sonnet-4-20250514","max_tokens":200,
+            json={"model":"claude-sonnet-4-20250514","max_tokens":400,
                   "messages":[{"role":"user","content":prompt}]},
-            timeout=15
+            timeout=20
         )
         d = r.json()
         if "error" in d: raise Exception(d["error"]["message"])
         raw = re.sub(r"```json|```","","".join(x["text"] for x in d["content"] if x.get("type")=="text")).strip()
-        hl = set(w.upper() for w in json.loads(raw).get("highlights",[]))
+        ed = json.loads(raw)
+
+        hl_set = set(w.upper() for w in ed.get("highlights",[]))
+        zoom_moments = ed.get("zoom_moments",[])
+        print(f"[{jid}] AI edit: hl={hl_set}, zoom={len(zoom_moments)}, notes={ed.get('edit_notes','')[:50]}")
+
+        # Highlight flag'lerini ekle
         for w in words:
             wc = re.sub(r"[^\wğüşöçıĞÜŞÖÇİ]","",w["word"]).upper()
-            w["highlight"] = wc in hl
-        return words
+            w["highlight"] = wc in hl_set
+
+        # Zoom zamanlarını word zamanlarıyla eşleştir
+        highlight_times = []
+        for zm in zoom_moments:
+            t = zm.get("time", 0)
+            intensity = min(zm.get("intensity", profile["zoom_factor"]), 1.08)
+            highlight_times.append({"time": t, "intensity": intensity, "dur": 1.0})
+
+        return words, highlight_times
+
     except Exception as e:
-        print(f"ai_highlights error: {e}")
+        print(f"ai_edit_decisions error: {e}")
+        # Fallback: büyük harflileri vurgula, otomatik zoom noktaları
         for w in words:
             w["highlight"] = w["word"].upper() == w["word"] and len(w["word"].strip()) > 2
-        return words
+        # Her n saniyede bir zoom
+        n = profile["zoom_interval"]
+        hl_times = [{"time": i*n+3, "intensity": profile["zoom_factor"], "dur": 1.0}
+                    for i in range(int(len(words)/2.5 / n))]
+        return words, hl_times
+
+# ════════════════════════════════════════════════════
+# FFMPEG VF ZİNCİRİ
+# ════════════════════════════════════════════════════
+
+def get_crop_filter(fmt):
+    if fmt == "9:16":
+        return "crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=720:1280"
+    elif fmt == "1:1":
+        return "crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale=720:720"
+    elif fmt == "16:9":
+        return "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black"
+    return ""
+
+def build_vf_chain(fmt, profile, highlight_times, silence_cuts, total_dur, t0, ass_path):
+    """
+    ffmpeg vf zinciri:
+    1. Crop/scale
+    2. Zoom effect (highlight anlarında)
+    3. ASS altyazı
+    """
+    parts = []
+
+    # 1. Crop
+    crop = get_crop_filter(fmt)
+    if crop:
+        parts.append(crop)
+
+    # 2. Zoom — highlight anlarında dinamik zoom
+    # zoompan filtresi ile — hafif zoom in/out
+    # Sadece fırsat ve hata için (agresif stiller)
+    if highlight_times and profile["rhythm"] in ("fast", "medium"):
+        zoom_filter = build_zoom_filter(highlight_times, total_dur, profile)
+        if zoom_filter:
+            parts.append(zoom_filter)
+
+    # 3. ASS
+    if ass_path and os.path.exists(ass_path):
+        parts.append(f"ass={ass_path}")
+
+    return ",".join(parts)
+
+def build_simple_vf(fmt, ass_path):
+    """Fallback: sadece crop + ass."""
+    parts = []
+    crop = get_crop_filter(fmt)
+    if crop: parts.append(crop)
+    if ass_path and os.path.exists(ass_path):
+        parts.append(f"ass={ass_path}")
+    return ",".join(parts)
+
+def build_zoom_filter(highlight_times, total_dur, profile):
+    """
+    ffmpeg zoompan ile highlight anlarında zoom.
+    Her highlight noktasında kısa zoom in → geri.
+    RAM tasarrufu için max 3 zoom noktası.
+    """
+    if not highlight_times: return ""
+
+    # Max 3 zoom noktası — RAM kısıtı
+    points = highlight_times[:3]
+    fps = 30
+
+    # zoompan expression: belirli framelerde zoom artır
+    # z='if(between(t,START,END),ZOOM,1)' formatı
+    zoom_exprs = []
+    for p in points:
+        t_start = p["time"]
+        t_end   = t_start + p.get("dur", 0.8)
+        z       = min(p.get("intensity", 1.05), 1.08)  # max %8 zoom
+        # Smooth: t_start'tan z'ye git, t_end'de geri dön
+        zoom_exprs.append(
+            f"if(between(t,{t_start:.2f},{t_end:.2f}),{z:.3f},1)"
+        )
+
+    if not zoom_exprs: return ""
+
+    # Birden fazla nokta varsa if-elif zinciri
+    if len(zoom_exprs) == 1:
+        z_expr = zoom_exprs[0]
+    else:
+        # En basit: ilkini kullan (birden fazla zoompan iç içe geçince hata çıkabilir)
+        z_expr = zoom_exprs[0]
+
+    # zoompan — dikkatli kullan, RAM yer
+    try:
+        # Önce width/height tahmin et
+        w, h = (720, 1280)  # 9:16 default
+        return (f"zoompan=z='{z_expr}':d=1:x='iw/2-(iw/zoom/2)'"
+                f":y='ih/2-(ih/zoom/2)':s={w}x{h}:fps={fps}")
+    except:
+        return ""
+
+# ════════════════════════════════════════════════════
+# ASS OLUŞTURMA
+# ════════════════════════════════════════════════════
 
 def build_ass(jid, inp, whisper_words, subs, hook_text, cta_text,
               fmt, total_dur, t0, profile):
@@ -488,26 +619,24 @@ def build_ass(jid, inp, whisper_words, subs, hook_text, cta_text,
         elif fmt == "1:1":  pw, ph = 720, 720
         else:               pw, ph = 1280, 720
 
-        # Boyutlar — angle'a göre farklı
-        fs_hook = int(pw * profile.get("hook_size_ratio", 0.082))
-        fs_sub  = int(pw * profile.get("sub_size_ratio", 0.062))
+        fs_hook = int(pw * profile.get("hook_size", 0.085))
+        fs_sub  = int(pw * profile.get("sub_size",  0.062))
         fs_cta  = int(pw * 0.052)
         fscale  = profile.get("font_scale", 105)
 
-        # SAFE ZONE marjinleri (9:16 için):
-        # Üst yasak: ~%18, Alt yasak: ~%27
-        # Hook: %38-48 arası (güvenli orta)
-        # Altyazı: %55-68 arası (güvenli alt-orta)
-        # CTA: %72-80 (güvenli alt)
-        hook_mv = int(ph * 0.42)   # Hook: safe zone ortası
-        sub_mv  = int(ph * 0.30)   # Altyazı: \an2 ile alttan bu marjin
-        cta_mv  = int(ph * 0.20)   # CTA: biraz daha aşağı
+        # SAFE ZONE:
+        # 9:16 (720x1280): Üst yasak 145px (%11), Alt yasak 204px (%16)
+        # Hook: an5 ile tam ortada (safe)
+        # Altyazı: an2 (alt-orta) + MarginV = alttan %28 — safe zone içi
+        # CTA: an2 + MarginV = alttan %20
+        sub_mv  = int(ph * 0.28)   # alttan safe zone
+        cta_mv  = int(ph * 0.18)   # CTA biraz daha aşağı ama hâlâ safe
 
-        hc  = profile.get("hook_color",  "&H00FFFFFF")
-        hi1 = profile.get("hi_primary",  "&H0055CCFF")
-        hi2 = profile.get("hi_secondary","&H0000FF00")
-        oc  = profile.get("outline",     "&H00000000")
-        sh  = profile.get("shadow",      "&HAA000000")
+        hc  = profile.get("hook_color", "&H00FFFFFF")
+        hi1 = profile.get("hi1",        "&H0055CCFF")
+        hi2 = profile.get("hi2",        "&H0000FF00")
+        oc  = profile.get("outline",    "&H00000000")
+        sh  = profile.get("shadow",     "&HAA000000")
 
         header = f"""[Script Info]
 ScriptType: v4.00+
@@ -517,41 +646,37 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hook,Arial,{fs_hook},{hc},&H00FFFFFF,{oc},{sh},-1,0,0,0,{fscale},{fscale},0.5,0,1,4,2,5,30,30,{hook_mv},1
+Style: Hook,Arial,{fs_hook},{hc},&H00FFFFFF,{oc},{sh},-1,0,0,0,{fscale},{fscale},0.5,0,1,4,2,5,30,30,200,1
 Style: Sub,Arial,{fs_sub},&H00FFFFFF,&H00FFFFFF,{oc},{sh},-1,0,0,0,{fscale},{fscale},0,0,1,3,1,2,20,20,{sub_mv},1
-Style: Hi1,Arial,{fs_sub},{hi1},&H00FFFFFF,{oc},{sh},-1,0,0,0,{int(fscale*1.08)},{int(fscale*1.08)},0,0,1,3,1,2,20,20,{sub_mv},1
-Style: Hi2,Arial,{fs_sub},{hi2},&H00FFFFFF,{oc},{sh},-1,0,0,0,{int(fscale*1.12)},{int(fscale*1.12)},0,0,1,3,1,2,20,20,{sub_mv},1
-Style: CTA,Arial,{fs_cta},&H00000000,&H00FFFFFF,{hi1},&H99000000,-1,0,0,0,{fscale},{fscale},1,0,1,0,0,2,20,20,{cta_mv},1
+Style: Hi1,Arial,{fs_sub},{hi1},&H00FFFFFF,{oc},{sh},-1,0,0,0,{int(fscale*1.08)},{int(fscale*1.08)},0,0,1,4,1,2,20,20,{sub_mv},1
+Style: Hi2,Arial,{fs_sub},{hi2},&H00FFFFFF,{oc},{sh},-1,0,0,0,{int(fscale*1.12)},{int(fscale*1.12)},0,0,1,4,1,2,20,20,{sub_mv},1
+Style: CTA,Arial,{fs_cta},&H00FFFFFF,&H00FFFFFF,{hi1},&H99001050,-1,0,0,0,{fscale},{fscale},1,0,1,0,0,2,20,20,{cta_mv},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
         lines = []
         hook_dur = profile.get("hook_dur", 3.0)
+        sub_words = profile.get("sub_words", 4)
 
-        # ── HOOK ────────────────────────────────────
+        # HOOK — an5 tam orta, büyük, bold
         if hook_text:
             h = clean(hook_text)
-            words = h.split()
-            # Uzun hook → 2 satır
-            if len(words) > 4:
-                mid = len(words) // 2
-                fmt_hook = f"{{\\b1}}{' '.join(words[:mid])}\\N{{\\b1}}{' '.join(words[mid:])}"
+            wds = h.split()
+            if len(wds) > 4:
+                mid = len(wds)//2
+                fmt_h = f"{{\\b1}}{' '.join(wds[:mid])}\\N{{\\b1}}{' '.join(wds[mid:])}"
             else:
-                fmt_hook = f"{{\\b1}}{h}"
-            # an5 = tam orta (yatay+dikey center)
-            lines.append(f"Dialogue: 0,{ts(0)},{ts(hook_dur)},Hook,,0,0,0,,{{\\an5}}{fmt_hook}")
+                fmt_h = f"{{\\b1}}{h}"
+            lines.append(f"Dialogue: 0,{ts(0)},{ts(hook_dur)},Hook,,0,0,0,,{{\\an5}}{fmt_h}")
 
-        # ── ALTYAZILAR ───────────────────────────────
-        sub_words = profile.get("sub_words", 4)
-        sub_gap   = profile.get("sub_gap", 0.12)
-
+        # ALTYAZILAR
         if whisper_words:
             adj = []
             for w in whisper_words:
                 s = w["start"] - t0
                 e = w["end"] - t0
-                if s >= hook_dur + 0.3 and s <= total_dur - 5.5:
+                if s >= hook_dur + 0.2 and s <= total_dur - 5.5:
                     adj.append({**w, "start":s, "end":e})
 
             for i in range(0, len(adj), sub_words):
@@ -565,49 +690,45 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 for w in g:
                     word = clean(w["word"].strip())
                     if not word: continue
-                    is_hl = w.get("highlight", False)
-                    if not is_hl and word.upper() == word and len(word) > 2:
-                        is_hl = True
+                    is_hl = w.get("highlight", False) or (word.upper()==word and len(word)>2)
                     if is_hl:
                         parts.append(f"{{\\rHi1}}{{\\b1}}{word}{{\\r}}")
                     else:
                         parts.append(word)
                 if parts:
-                    # an2 = alt-orta
                     lines.append(f"Dialogue: 0,{ts(t_s)},{ts(t_e)},Sub,,0,0,0,,{{\\an2}}{' '.join(parts)}")
         else:
-            available = total_dur - hook_dur - 0.3 - 5.5
-            if available > 0 and subs:
-                seg = available / len(subs)
+            avail = total_dur - hook_dur - 0.2 - 5.5
+            if avail > 0 and subs:
+                seg = avail / len(subs)
                 for i, sub in enumerate(subs):
-                    t_s = hook_dur + 0.3 + i * seg
-                    t_e = min(t_s + seg - sub_gap, total_dur - 5.5)
+                    t_s = hook_dur + 0.2 + i * seg
+                    t_e = min(t_s + seg - 0.15, total_dur - 5.5)
                     if t_s >= t_e: continue
 
                     hl_set = set(x.upper().strip() for x in sub.get("highlight",[]))
-                    words = clean(sub.get("text","")).split()
-                    if not words: continue
+                    wds = clean(sub.get("text","")).split()
+                    if not wds: continue
 
-                    # 2 satır max
-                    if len(words) > 5:
-                        mid = len(words) // 2
-                        for li, wlist in enumerate([words[:mid], words[mid:]]):
-                            lt_s = t_s + li * (seg/2)
-                            lt_e = lt_s + seg/2 - sub_gap
+                    if len(wds) > 5:
+                        mid = len(wds)//2
+                        for li, wlist in enumerate([wds[:mid], wds[mid:]]):
+                            lt_s = t_s + li*(seg/2)
+                            lt_e = lt_s + seg/2 - 0.15
                             parts = _style_words(wlist, hl_set)
                             lines.append(f"Dialogue: 0,{ts(lt_s)},{ts(lt_e)},Sub,,0,0,0,,{{\\an2}}{' '.join(parts)}")
                     else:
-                        parts = _style_words(words, hl_set)
+                        parts = _style_words(wds, hl_set)
                         lines.append(f"Dialogue: 0,{ts(t_s)},{ts(t_e)},Sub,,0,0,0,,{{\\an2}}{' '.join(parts)}")
 
-        # ── CTA ─────────────────────────────────────
+        # CTA — an2 alt-orta, renkli box
         if cta_text:
             c = clean(cta_text)
-            cta_start = max(hook_dur + 0.5, total_dur - 5.0)
-            lines.append(f"Dialogue: 0,{ts(cta_start)},{ts(total_dur)},CTA,,0,0,0,,{{\\an2}}{{\\b1}}{c}")
+            cta_s = max(hook_dur + 0.5, total_dur - 5.0)
+            lines.append(f"Dialogue: 0,{ts(cta_s)},{ts(total_dur)},CTA,,0,0,0,,{{\\an2}}{{\\b1}}{c}")
 
         ass_path = inp.replace("_in","_sub").replace(Path(inp).suffix,".ass")
-        with open(ass_path, "w", encoding="utf-8") as f:
+        with open(ass_path,"w",encoding="utf-8") as f:
             f.write(header + "\n".join(lines))
 
         print(f"[{jid}] ASS: {len(lines)} satir ({profile['label']})")
@@ -621,7 +742,7 @@ def _style_words(words, hl_set):
     parts = []
     for w in words:
         wc = re.sub(r"[^\wğüşöçıĞÜŞÖÇİ]","",w.upper())
-        if wc in hl_set or (w.upper() == w and len(w) > 2):
+        if wc in hl_set or (w.upper()==w and len(w)>2):
             parts.append(f"{{\\rHi1}}{{\\b1}}{w}{{\\r}}")
         else:
             parts.append(w)
